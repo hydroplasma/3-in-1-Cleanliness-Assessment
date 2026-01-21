@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AnyData, CurrentUser, Criterion, Assessment, Room, User } from '../types';
 import { dataService } from '../services/dataService';
+import { useLanguage } from '../services/i18n';
 
 interface AssessmentFormProps {
   type: 'area' | 'classroom' | 'restroom';
@@ -19,9 +20,11 @@ interface StudentAttendance {
 }
 
 export default function AssessmentForm({ type, currentUser, allData, showLoading, hideLoading, showToast }: AssessmentFormProps) {
+  const { t } = useLanguage();
+
   const config = {
     area: {
-      title: 'ประเมินเขตพื้นที่รับผิดชอบ',
+      title: t('assessment_area'),
       desc: 'ติดตามและให้คะแนนความสะอาดของพื้นที่ภายนอกและโซนที่ได้รับมอบหมาย',
       gradient: 'from-blue-600 to-indigo-600',
       icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />,
@@ -29,7 +32,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
       textLight: 'text-blue-100'
     },
     classroom: {
-      title: 'ประเมินห้องเรียน',
+      title: t('assessment_classroom'),
       desc: 'ติดตามและให้คะแนนความสะอาด ความเป็นระเบียบภายในห้องเรียน',
       gradient: 'from-emerald-600 to-teal-600',
       icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />,
@@ -37,7 +40,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
       textLight: 'text-emerald-100'
     },
     restroom: {
-      title: 'ประเมินห้องน้ำ',
+      title: t('assessment_restroom'),
       desc: 'ติดตามและให้คะแนนความสะอาดและสุขอนามัยของห้องน้ำ',
       gradient: 'from-amber-600 to-orange-600',
       icon: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />,
@@ -79,7 +82,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
       );
 
       if (isDuplicate) {
-        setError(`⚠️ ตรวจพบข้อมูลการประเมินซ้ำ: สถานที่ "${formData.location}" ได้รับการประเมินในวันที่ ${new Date(formData.date).toLocaleDateString('th-TH')} ไปแล้ว`);
+        setError(`⚠️ ${t('duplicate_alert')}: "${formData.location}"`);
       }
     }
 
@@ -94,7 +97,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
             setResponsibleStudents([]);
         }
     }
-  }, [formData.location, formData.date, type, allData]);
+  }, [formData.location, formData.date, type, allData, t]);
 
   const processImage = (file: File, location: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -147,19 +150,19 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       if (!formData.location) {
-        showToast('กรุณาเลือกสถานที่ก่อนอัปโหลดภาพ', 'error');
+        showToast(t('select_location'), 'error');
         e.target.value = '';
         return;
       }
       setProcessing(true);
-      showLoading('กำลังประมวลผลลายน้ำ...');
+      showLoading(t('loading'));
       const newFiles = Array.from(e.target.files).slice(0, 5 - processedImages.length);
       try {
         const results = await Promise.all(newFiles.map(file => processImage(file as File, formData.location)));
         setProcessedImages(prev => [...prev, ...results].slice(0, 5));
-        showToast(`ประมวลผลรูปภาพ ${results.length} รูปเรียบร้อย`, 'success');
+        showToast(`Success ${results.length}`, 'success');
       } catch (err) {
-        showToast('ไม่สามารถประมวลผลรูปภาพได้', 'error');
+        showToast('Error processing', 'error');
       } finally {
         setProcessing(false);
         hideLoading();
@@ -185,16 +188,16 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (error.includes('ซ้ำ')) return;
+    if (error.includes('⚠️')) return;
 
     const scoreValues = Object.values(scores) as number[];
     if (scoreValues.length === 0) {
-      showToast('กรุณาให้คะแนนอย่างน้อย 1 หัวข้อ', 'error');
+      showToast('Score required', 'error');
       return;
     }
 
     setSubmitting(true);
-    showLoading('กำลังบันทึกข้อมูลการประเมิน...');
+    showLoading(t('saving'));
 
     try {
         let percentageScore = 0;
@@ -238,23 +241,23 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
 
         const result = await dataService.create(assessmentData);
         if (result.isOk) {
-          showToast('บันทึกข้อมูลเรียบร้อยแล้ว!', 'success');
+          showToast(t('success_save'), 'success');
           setFormData({ location: '', date: new Date().toISOString().split('T')[0], remarks: '' });
           setProcessedImages([]);
           setScores({});
           setResponsibleStudents([]);
         } else {
-          showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+          showToast(t('error_save'), 'error');
         }
     } catch (err) {
-        showToast('ระบบขัดข้อง กรุณาลองใหม่', 'error');
+        showToast('Error', 'error');
     } finally {
         setSubmitting(false);
         hideLoading();
     }
   };
 
-  const scoreLabels: Record<number, string> = { 5: 'ดีเยี่ยม', 4: 'ดีมาก', 3: 'ปานกลาง', 2: 'พอใช้', 1: 'ปรับปรุง' };
+  const scoreLabels: Record<number, string> = { 5: t('excellent'), 4: t('good'), 3: 'ปานกลาง', 2: 'พอใช้', 1: t('needs_improvement') };
   const scoreColors: Record<number, string> = { 
     5: 'bg-emerald-500 text-white', 
     4: 'bg-blue-500 text-white', 
@@ -286,40 +289,40 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">สถานที่ (Location) <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('location')} <span className="text-red-500">*</span></label>
               <select required className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}>
-                <option value="">-- เลือกสถานที่ --</option>
+                <option value="">{t('select_location')}</option>
                 {rooms.map(room => (
                   <option key={room.room_id} value={room.room_name}>{room.room_name} {room.room_building ? `(${room.room_building})` : ''}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">วันที่ประเมิน <span className="text-red-500">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('date')} <span className="text-red-500">*</span></label>
               <input type="date" required className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
             </div>
           </div>
 
-          {error.includes('ซ้ำ') && (
+          {error.includes('⚠️') && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 dark:bg-red-900/20 dark:border-red-800">
                <svg className="w-5 h-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                <div className="text-sm font-bold text-red-700 dark:text-red-400">{error}</div>
             </div>
           )}
 
-          {type === 'area' && formData.location && !error.includes('ซ้ำ') && (
+          {type === 'area' && formData.location && !error.includes('⚠️') && (
               <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
                   <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                       <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                      เช็คชื่อนักเรียน (Attendance) - 10 คะแนน
+                      {t('attendance_check')} - 10 {t('score')}
                   </h4>
                   {responsibleStudents.length > 0 ? (
                       <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
                           <div className="flex justify-between items-center mb-4">
                               <p className="text-sm text-slate-600 dark:text-slate-400">เช็คชื่อนักเรียนที่มาทำเวร:</p>
                               <div className="flex gap-2">
-                                  <button type="button" onClick={() => setAllAttendance(true)} className="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">มาทั้งหมด</button>
-                                  <button type="button" onClick={() => setAllAttendance(false)} className="text-xs px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300">ไม่มาทั้งหมด</button>
+                                  <button type="button" onClick={() => setAllAttendance(true)} className="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">{t('student_present')}</button>
+                                  <button type="button" onClick={() => setAllAttendance(false)} className="text-xs px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300">{t('student_absent')}</button>
                               </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -340,7 +343,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
           <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
             <h4 className="font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
               <svg className="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-              หัวข้อการประเมินและเกณฑ์รูบริก (Evaluation Criteria)
+              {t('rubric_title')}
             </h4>
             <div className="space-y-10">
               {criteria.map((criterion, idx) => (
@@ -376,7 +379,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className={`text-sm font-bold ${isSelected ? `text-${config.color}-700 dark:text-${config.color}-400` : 'text-slate-700 dark:text-slate-300'}`}>
-                                  ระดับ: {scoreLabels[score]}
+                                  {t('level')}: {scoreLabels[score]}
                                 </span>
                                 {isSelected && (
                                   <span className={`w-2 h-2 rounded-full animate-pulse bg-${config.color}-500`}></span>
@@ -404,15 +407,15 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
 
           <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
             <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
-              <span>อัปโหลดรูปภาพหลักฐาน (สูงสุด 5 รูป)</span>
-              {processing && <span className="text-xs text-indigo-600 animate-pulse font-bold">กำลังประมวลผลลายน้ำ...</span>}
+              <span>{t('upload_photos')}</span>
+              {processing && <span className="text-xs text-indigo-600 animate-pulse font-bold">{t('loading')}</span>}
             </h4>
             <div className={`border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50 dark:bg-slate-800/50 dark:border-slate-700 transition-colors ${processedImages.length >= 5 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-indigo-400'}`}>
               <input type="file" id="images" accept="image/*" multiple className="hidden" onChange={handleImageChange} disabled={processedImages.length >= 5 || processing} />
               <label htmlFor="images" className="cursor-pointer block">
                 <svg className="w-10 h-10 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">คลิกเพื่ออัปโหลด</p>
-                <p className="text-[10px] text-slate-400 mt-1">ระบบจะประทับลายน้ำ วันที่/เวลา/สถานที่ อัตโนมัติ</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('click_upload')}</p>
+                <p className="text-[10px] text-slate-400 mt-1">{t('watermark_info')}</p>
               </label>
             </div>
             
@@ -427,14 +430,14 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">หมายเหตุเพิ่มเติม</label>
-            <textarea rows={2} placeholder="ระบุรายละเอียดเพิ่มเติม..." className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})}></textarea>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('remarks')}</label>
+            <textarea rows={2} placeholder="..." className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})}></textarea>
           </div>
 
           <div className="flex gap-3 pt-4">
-            <button type="button" className="flex-1 px-6 py-3 text-slate-600 font-semibold rounded-xl bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" onClick={() => { if(confirm('ล้างข้อมูลทั้งหมด?')) window.location.reload(); }}>ล้างค่า</button>
-            <button type="submit" disabled={submitting || processing || rooms.length === 0 || error.includes('ซ้ำ')} className="flex-[2] btn-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg disabled:opacity-50">
-              {submitting ? 'กำลังบันทึก...' : 'บันทึกการประเมิน'}
+            <button type="button" className="flex-1 px-6 py-3 text-slate-600 font-semibold rounded-xl bg-white border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" onClick={() => { if(confirm('Clear?')) window.location.reload(); }}>{t('clear')}</button>
+            <button type="submit" disabled={submitting || processing || rooms.length === 0 || error.includes('⚠️')} className="flex-[2] btn-primary text-white px-8 py-3 rounded-xl font-bold shadow-lg disabled:opacity-50">
+              {submitting ? t('saving') : t('save_assessment')}
             </button>
           </div>
         </form>

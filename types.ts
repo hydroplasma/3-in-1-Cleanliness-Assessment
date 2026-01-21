@@ -1,4 +1,6 @@
 
+export type Language = 'th' | 'en' | 'is';
+
 export interface User {
   __backendId?: string;
   type: 'user';
@@ -99,6 +101,7 @@ export interface SystemSettings {
   reminder_time?: string; // Fallback legacy field
   reminder_daily?: Record<number, string>; // {0: '08:00', 1: '08:30', ...} 0=Sunday
   last_reminder_sent_date?: string; // YYYY-MM-DD
+  language?: Language; // New: Language setting
 }
 
 export type AnyData = User | Room | Criterion | Assessment | Goal | Notification | SystemSettings;

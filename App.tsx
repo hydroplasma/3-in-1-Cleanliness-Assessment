@@ -15,18 +15,20 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import NotificationPanel from './components/NotificationPanel';
 import Certificates from './components/Certificates';
+import { LanguageProvider, useLanguage } from './services/i18n';
 
-export default function App() {
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [activePage, setActivePage] = useState('dashboard');
   const [allData, setAllData] = useState<AnyData[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const { t, setLanguage } = useLanguage();
 
   // States for Loading and Toast
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingText, setLoadingText] = useState('กำลังโหลด...');
+  const [loadingText, setLoadingText] = useState(t('loading'));
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
   // Background interval reference
@@ -49,6 +51,8 @@ export default function App() {
         if (settings.themeColor && settings.themeColor !== 'indigo') {
            document.body.classList.add(`theme-${settings.themeColor}`);
         }
+        // Sync language from cloud if available and not set locally (optional strategy)
+        // For now, we prefer local setting for language
       }
     });
 
@@ -60,6 +64,11 @@ export default function App() {
       if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
     };
   }, []);
+
+  // Update loading text when language changes
+  useEffect(() => {
+    if (isLoading) setLoadingText(t('loading'));
+  }, [t, isLoading]);
 
   const checkReminders = async () => {
     const data = dataService.getAll();
@@ -132,18 +141,18 @@ export default function App() {
   };
 
   const handleLogin = (user: CurrentUser) => {
-    showLoading('กำลังตรวจสอบสิทธิ์...');
+    showLoading(t('loading'));
     setTimeout(() => {
       setCurrentUser(user);
       setActivePage('dashboard');
       hideLoading();
-      showToast('ยินดีต้อนรับเข้าสู่ระบบ', 'success');
+      showToast(t('welcome'), 'success');
     }, 800);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    showToast('ออกจากระบบแล้ว');
+    showToast(t('logout_success'));
   };
 
   const renderPage = () => {
@@ -220,9 +229,9 @@ export default function App() {
             {renderPage()}
           </div>
           <footer className="mt-8 pt-6 pb-4 text-center border-t border-slate-200 dark:border-slate-800">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">ระบบประเมินเวรทำความสะอาด (3-in-1 Cleanliness Assessment)</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('app_name')} (3-in-1 Cleanliness Assessment)</p>
             <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
-              พัฒนาโดย: นายธวัชชัย แก่นจักร์ ครู โรงเรียนน้ำคำวิทยา Copyright © 2026
+              {t('developer')} Copyright © 2026
             </p>
           </footer>
         </main>
@@ -232,6 +241,14 @@ export default function App() {
       )}
       <NotificationPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} allData={allData} />
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

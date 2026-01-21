@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { AnyData, Assessment } from '../types';
 import AssessmentDetailModal from './AssessmentDetailModal';
+import { useLanguage } from '../services/i18n';
 
 interface DashboardProps {
   allData: AnyData[];
@@ -9,6 +10,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ allData, setActivePage }: DashboardProps) {
+  const { t } = useLanguage();
   const assessments = allData.filter((d): d is Assessment => d.type === 'assessment');
   const totalAssessments = assessments.length;
 
@@ -27,9 +29,9 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case 'area': return 'เขตพื้นที่';
-      case 'classroom': return 'ห้องเรียน';
-      case 'restroom': return 'ห้องน้ำ';
+      case 'area': return t('assessment_area');
+      case 'classroom': return t('assessment_classroom');
+      case 'restroom': return t('assessment_restroom');
       default: return type;
     }
   };
@@ -49,8 +51,8 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
   return (
     <div className="page-content fade-in">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">ภาพรวม (Dashboard)</h2>
-        <p className="text-slate-500 mt-1">ติดตามคะแนนความสะอาดและแนวโน้มในทุกพื้นที่</p>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('overview')} ({t('dashboard')})</h2>
+        <p className="text-slate-500 mt-1">{t('overview_desc')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -61,7 +63,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
             </div>
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">+5.2%</span>
           </div>
-          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">เขตพื้นที่ (Area Zones)</h3>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">{t('assessment_area')}</h3>
           <div className="flex items-end justify-between">
             <span className="text-3xl font-bold text-slate-900 dark:text-white">{calculateAvg('area') || '0.0'}</span>
             <span className="text-sm text-slate-400 mb-1">/ 100</span>
@@ -74,7 +76,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
             </div>
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">+8.1%</span>
           </div>
-          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">ห้องเรียน (Classrooms)</h3>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">{t('assessment_classroom')}</h3>
           <div className="flex items-end justify-between">
             <span className="text-3xl font-bold text-slate-900 dark:text-white">{calculateAvg('classroom') || '0.0'}</span>
             <span className="text-sm text-slate-400 mb-1">/ 100</span>
@@ -87,7 +89,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
             </div>
             <span className="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">-2.3%</span>
           </div>
-          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">ห้องน้ำ (Restrooms)</h3>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">{t('assessment_restroom')}</h3>
           <div className="flex items-end justify-between">
             <span className="text-3xl font-bold text-slate-900 dark:text-white">{calculateAvg('restroom') || '0.0'}</span>
             <span className="text-sm text-slate-400 mb-1">/ 100</span>
@@ -100,10 +102,10 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
             </div>
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">+12%</span>
           </div>
-          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">การประเมินทั้งหมด</h3>
+          <h3 className="text-slate-500 text-sm font-semibold uppercase tracking-wide mb-1">{t('total_assessments')}</h3>
           <div className="flex items-end justify-between">
             <span className="text-3xl font-bold text-slate-900 dark:text-white">{totalAssessments}</span>
-            <span className="text-sm text-slate-400 mb-1">ครั้งในเดือนนี้</span>
+            <span className="text-sm text-slate-400 mb-1">{t('times_this_month')}</span>
           </div>
         </div>
       </div>
@@ -111,7 +113,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">แนวโน้มคะแนน (Trends)</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('trends')}</h3>
             <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-white">
               <option>6 เดือนย้อนหลัง</option>
               <option>3 เดือนย้อนหลัง</option>
@@ -142,7 +144,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
           </div>
         </div>
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">ผู้ทำคะแนนยอดเยี่ยม</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('top_scorers')}</h3>
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 to-transparent border border-amber-100 dark:from-amber-900/10 dark:border-amber-900/30 transition-colors">
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white font-bold shadow-lg">1</div>
@@ -152,7 +154,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">98</span>
-                <p className="text-xs text-slate-400">คะแนน</p>
+                <p className="text-xs text-slate-400">{t('score')}</p>
               </div>
             </div>
             <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 transition-colors">
@@ -163,7 +165,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">95</span>
-                <p className="text-xs text-slate-400">คะแนน</p>
+                <p className="text-xs text-slate-400">{t('score')}</p>
               </div>
             </div>
             <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 transition-colors">
@@ -174,7 +176,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">94</span>
-                <p className="text-xs text-slate-400">คะแนน</p>
+                <p className="text-xs text-slate-400">{t('score')}</p>
               </div>
             </div>
           </div>
@@ -183,19 +185,19 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">การประเมินล่าสุด</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('recent_assessments')}</h3>
           <button 
             className="text-indigo-600 text-sm font-semibold hover:text-indigo-800 transition-colors"
             onClick={() => setActivePage('report')}
           >
-            ดูทั้งหมด →
+            {t('view_all')} →
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {recent.length === 0 ? (
             <div className="text-center py-8 col-span-full text-slate-400">
               <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <p className="text-sm">ยังไม่มีข้อมูลการประเมิน เริ่มต้นประเมินครั้งแรก!</p>
+              <p className="text-sm">{t('no_data')}</p>
             </div>
           ) : (
             recent.map((a, idx) => (
@@ -209,11 +211,11 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
                   <span className="text-[10px] text-slate-400 font-bold">{new Date(a.date).toLocaleDateString('th-TH')}</span>
                 </div>
                 <h4 className="font-bold text-slate-900 dark:text-white mb-1 group-hover:text-indigo-600 transition-colors">{a.location}</h4>
-                <p className="text-[10px] text-slate-500 mb-3">โดย {a.evaluator}</p>
+                <p className="text-[10px] text-slate-500 mb-3">{t('by')} {a.evaluator}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <span className={`text-2xl font-black ${getScoreColor(a.score)}`}>{a.score}</span>
-                    <span className="text-slate-400 text-[10px] ml-1 font-bold uppercase">คะแนน</span>
+                    <span className="text-slate-400 text-[10px] ml-1 font-bold uppercase">{t('score')}</span>
                   </div>
                   {a.image_count > 0 && (
                     <div className="flex items-center gap-1 text-slate-400">

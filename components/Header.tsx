@@ -1,5 +1,7 @@
+
 import React from 'react';
 import { CurrentUser, AnyData, SystemSettings } from '../types';
+import { useLanguage } from '../services/i18n';
 
 interface HeaderProps {
   user: CurrentUser;
@@ -14,9 +16,9 @@ interface HeaderProps {
 export default function Header({ user, onLogout, toggleMobileMenu, toggleNotifications, allData, darkMode, toggleDarkMode }: HeaderProps) {
   const unreadCount = allData.filter(d => d.type === 'notification' && !d.notification_read).length;
   const settings = allData.find(d => d.type === 'settings') as SystemSettings | undefined;
+  const { language, setLanguage, t } = useLanguage();
 
   const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
-  const schoolAffiliation = settings?.school_affiliation || 'โรงเรียนสาธิต';
   const logoUrl = settings?.logo_url;
 
   return (
@@ -34,11 +36,22 @@ export default function Header({ user, onLogout, toggleMobileMenu, toggleNotific
             )}
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight">ระบบประเมินความสะอาด</h1>
+            <h1 className="text-base font-bold tracking-tight">{t('app_name')}</h1>
             <p className="text-xs text-indigo-200 truncate max-w-[150px] sm:max-w-xs">{schoolName}</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
+           {/* Language Switcher */}
+           <div className="hidden sm:flex bg-white/10 rounded-xl p-1 backdrop-blur-sm">
+             <button onClick={() => setLanguage('th')} className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${language === 'th' ? 'bg-white text-indigo-600' : 'text-white hover:bg-white/10'}`}>TH</button>
+             <button onClick={() => setLanguage('is')} className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${language === 'is' ? 'bg-white text-indigo-600' : 'text-white hover:bg-white/10'}`}>IS</button>
+             <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${language === 'en' ? 'bg-white text-indigo-600' : 'text-white hover:bg-white/10'}`}>EN</button>
+           </div>
+           {/* Mobile Lang */}
+           <button onClick={() => setLanguage(language === 'th' ? 'is' : language === 'is' ? 'en' : 'th')} className="sm:hidden w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-xs font-bold border border-white/20">
+             {language.toUpperCase()}
+           </button>
+
            <button onClick={toggleDarkMode} className="p-2.5 hover:bg-white/10 rounded-xl transition-colors" title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
             {darkMode ? (
                <svg className="w-5 h-5 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
