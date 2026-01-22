@@ -115,31 +115,31 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('trends')}</h3>
             <select className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-white">
-              <option>6 เดือนย้อนหลัง</option>
-              <option>3 เดือนย้อนหลัง</option>
-              <option>ปีนี้</option>
+              <option>6 Month History</option>
+              <option>3 Month History</option>
+              <option>This Year</option>
             </select>
           </div>
           <div className="h-64 flex items-end justify-around px-4 gap-3">
             <div className="flex flex-col items-center flex-1">
               <div className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-xl" style={{height: '140px'}}></div>
-              <span className="text-xs text-slate-500 mt-2 font-medium">ม.ค.</span>
+              <span className="text-xs text-slate-500 mt-2 font-medium">{t('jan')}</span>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-xl" style={{height: '160px'}}></div>
-              <span className="text-xs text-slate-500 mt-2 font-medium">ก.พ.</span>
+              <span className="text-xs text-slate-500 mt-2 font-medium">{t('feb')}</span>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-xl" style={{height: '135px'}}></div>
-              <span className="text-xs text-slate-500 mt-2 font-medium">มี.ค.</span>
+              <span className="text-xs text-slate-500 mt-2 font-medium">{t('mar')}</span>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="w-full bg-gradient-to-t from-blue-500 to-blue-300 rounded-t-xl" style={{height: '170px'}}></div>
-              <span className="text-xs text-slate-500 mt-2 font-medium">เม.ย.</span>
+              <span className="text-xs text-slate-500 mt-2 font-medium">{t('apr')}</span>
             </div>
             <div className="flex flex-col items-center flex-1">
               <div className="w-full bg-gradient-to-t from-emerald-500 to-emerald-300 rounded-t-xl shadow-lg" style={{height: '190px'}}></div>
-              <span className="text-xs text-slate-700 mt-2 font-bold dark:text-slate-300">พ.ค.</span>
+              <span className="text-xs text-slate-700 mt-2 font-bold dark:text-slate-300">{t('may')}</span>
             </div>
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-500 text-white font-bold shadow-lg">1</div>
               <div className="flex-1">
                 <h4 className="font-bold text-slate-900 dark:text-white">Room 3A</h4>
-                <p className="text-xs text-slate-500">ห้องเรียน • อาคาร A</p>
+                <p className="text-xs text-slate-500">Classroom • Bldg A</p>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">98</span>
@@ -161,7 +161,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 text-white font-bold">2</div>
               <div className="flex-1">
                 <h4 className="font-bold text-slate-900 dark:text-white">Zone A1</h4>
-                <p className="text-xs text-slate-500">เขตพื้นที่ • ชั้น 1</p>
+                <p className="text-xs text-slate-500">Area Zone • Floor 1</p>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">95</span>
@@ -172,7 +172,7 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-300 to-orange-400 text-white font-bold">3</div>
               <div className="flex-1">
                 <h4 className="font-bold text-slate-900 dark:text-white">Room 2B</h4>
-                <p className="text-xs text-slate-500">ห้องเรียน • อาคาร B</p>
+                <p className="text-xs text-slate-500">Classroom • Bldg B</p>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-bold text-emerald-600">94</span>

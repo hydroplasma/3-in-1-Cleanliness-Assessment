@@ -12,7 +12,7 @@ interface ReportsProps {
 }
 
 export default function Reports({ allData, showLoading, hideLoading, showToast }: ReportsProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [filterStatus, setFilterStatus] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -44,27 +44,30 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
     setFilterStatus('');
     setStartDate('');
     setEndDate('');
-    showToast('ล้างตัวกรองแล้ว', 'info');
+    // Use the language variable directly instead of calling t('language')
+    showToast(language === 'th' ? 'ล้างตัวกรองแล้ว' : 'Filters cleared', 'info');
   };
 
   const handleExportPDF = () => {
     if (totalFiltered.length === 0) {
-      showToast('ไม่มีข้อมูลให้พิมพ์', 'error');
+      // Use the language variable directly instead of calling t('language')
+      showToast(language === 'th' ? 'ไม่มีข้อมูลให้พิมพ์' : 'No data to print', 'error');
       return;
     }
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
+    const schoolName = settings?.school_name || 'School Name';
     const schoolAffiliation = settings?.school_affiliation || '';
+    const locale = language === 'th' ? 'th-TH' : 'en-US';
     
     let rowsHtml = totalFiltered.map((a, i) => `
       <tr>
         <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${i+1}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${new Date(a.date).toLocaleDateString('th-TH')}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${new Date(a.date).toLocaleDateString(locale)}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${a.location}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${a.assessment_type === 'area' ? 'เขตพื้นที่' : a.assessment_type === 'classroom' ? 'ห้องเรียน' : 'ห้องน้ำ'}</td>
+        <td style="border: 1px solid #ddd; padding: 8px;">${a.assessment_type === 'area' ? t('assessment_area') : a.assessment_type === 'classroom' ? t('assessment_classroom') : t('assessment_restroom')}</td>
         <td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${a.score}</td>
         <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${getStatusLabel(a.status)}</td>
         <td style="border: 1px solid #ddd; padding: 8px;">${a.evaluator}</td>
@@ -74,7 +77,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
     printWindow.document.write(`
       <html>
         <head>
-          <title>รายงานสรุปผลการประเมินความสะอาด</title>
+          <title>${t('report')}</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; }
@@ -91,19 +94,19 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
           <div class="header">
             <div class="school-name">${schoolName}</div>
             <div style="font-size: 14px;">${schoolAffiliation}</div>
-            <div class="report-title">รายงานสรุปผลการประเมินความสะอาด</div>
-            <div style="margin-top: 5px;">ประจำช่วงวันที่ ${startDate || 'เริ่มต้น'} ถึง ${endDate || 'ปัจจุบัน'}</div>
+            <div class="report-title">${t('report')}</div>
+            <div style="margin-top: 5px;">${startDate || 'START'} - ${endDate || 'END'}</div>
           </div>
           <table>
             <thead>
               <tr>
-                <th width="50">ลำดับ</th>
-                <th width="100">วันที่</th>
-                <th>สถานที่/ห้อง</th>
-                <th width="100">ประเภท</th>
-                <th width="80">คะแนน</th>
-                <th width="100">สถานะ</th>
-                <th>ผู้ประเมิน</th>
+                <th width="50">#</th>
+                <th width="100">${t('date')}</th>
+                <th>${t('location')}</th>
+                <th width="120">${t('assessment')}</th>
+                <th width="80">${t('score')}</th>
+                <th width="100">Status</th>
+                <th>${t('by')}</th>
               </tr>
             </thead>
             <tbody>
@@ -111,13 +114,13 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
             </tbody>
           </table>
           <div class="summary">
-            <strong>สรุปผลภาพรวม:</strong> จำนวนทั้งหมด ${totalFiltered.length} รายการ | คะแนนเฉลี่ยรวม ${avgScore} คะแนน
+            <strong>Summary:</strong> Total ${totalFiltered.length} items | Average Score ${avgScore}
           </div>
           <div class="signature">
              <br/><br/>
              .......................................................<br/>
              ( ${settings?.executives || '...........................................'} )<br/>
-             ตำแหน่ง .........................................
+             ${t('cert_director')}
           </div>
           <script>window.onload = function() { window.print(); };</script>
         </body>
@@ -128,7 +131,8 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
 
   const handleExportExcel = () => {
     if (totalFiltered.length === 0) {
-      showToast('ไม่มีข้อมูลให้ส่งออก', 'error');
+      // Use the language variable directly instead of calling t('language')
+      showToast(language === 'th' ? 'ไม่มีข้อมูลให้ส่งออก' : 'No data to export', 'error');
       return;
     }
     showLoading(t('loading'));
@@ -139,22 +143,22 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
         <head><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"></head>
         <body>
           <table>
-            <tr><td colspan="7" style="font-size: 16pt; font-weight: bold; text-align: center;">รายงานสรุปการประเมินความสะอาด - ${schoolName}</td></tr>
+            <tr><td colspan="7" style="font-size: 16pt; font-weight: bold; text-align: center;">${t('report')} - ${schoolName}</td></tr>
             <tr>
-              <td style="background-color: #4F46E5; color: white;">ลำดับ</td>
-              <td style="background-color: #4F46E5; color: white;">วันที่</td>
-              <td style="background-color: #4F46E5; color: white;">สถานที่/ห้อง</td>
-              <td style="background-color: #4F46E5; color: white;">ประเภท</td>
-              <td style="background-color: #4F46E5; color: white;">คะแนน</td>
-              <td style="background-color: #4F46E5; color: white;">สถานะ</td>
-              <td style="background-color: #4F46E5; color: white;">ผู้ประเมิน</td>
+              <td style="background-color: #4F46E5; color: white;">#</td>
+              <td style="background-color: #4F46E5; color: white;">${t('date')}</td>
+              <td style="background-color: #4F46E5; color: white;">${t('location')}</td>
+              <td style="background-color: #4F46E5; color: white;">${t('assessment')}</td>
+              <td style="background-color: #4F46E5; color: white;">${t('score')}</td>
+              <td style="background-color: #4F46E5; color: white;">Status</td>
+              <td style="background-color: #4F46E5; color: white;">${t('by')}</td>
             </tr>
             ${totalFiltered.map((a, i) => `
               <tr>
                 <td>${i+1}</td>
                 <td>${a.date}</td>
                 <td>${a.location}</td>
-                <td>${a.assessment_type}</td>
+                <td>${a.assessment_type === 'area' ? t('assessment_area') : a.assessment_type === 'classroom' ? t('assessment_classroom') : t('assessment_restroom')}</td>
                 <td>${a.score}</td>
                 <td>${getStatusLabel(a.status)}</td>
                 <td>${a.evaluator}</td>
@@ -168,12 +172,13 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `รายงานความสะอาด_${Date.now()}.xls`;
+      a.download = `Report_${Date.now()}.xls`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       hideLoading();
-      showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
+      // Use the language variable directly instead of calling t('language')
+      showToast(language === 'th' ? 'ส่งออกไฟล์ Excel สำเร็จ' : 'Excel exported successfully', 'success');
     }, 1000);
   };
 
@@ -212,10 +217,10 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
           <div className="flex items-center gap-3">
             <div className={`w-1.5 h-6 rounded-full bg-${config.color}-500`}></div>
             <h3 className="font-bold text-slate-800 dark:text-white">{title}</h3>
-            <span className={`text-[10px] bg-${config.color}-100 text-${config.color}-700 px-2 py-0.5 rounded-full font-bold`}>{data.length} รายการ</span>
+            <span className={`text-[10px] bg-${config.color}-100 text-${config.color}-700 px-2 py-0.5 rounded-full font-bold`}>{data.length} {t('total_assessments')}</span>
           </div>
           <div className="text-right">
-             <p className="text-[10px] text-slate-400 font-bold uppercase">คะแนนเฉลี่ย</p>
+             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t('cert_avg_score')}</p>
              <p className={`text-lg font-black text-${config.color}-600`}>{typeAvg}</p>
           </div>
         </div>
@@ -223,18 +228,18 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
           <table className="w-full min-w-[700px]">
             <thead>
               <tr className="text-slate-400 text-xs font-bold uppercase tracking-wider text-left border-b border-slate-50 dark:border-slate-800">
-                <th className="pb-3 px-2">วันที่</th>
-                <th className="pb-3 px-2">สถานที่</th>
-                <th className="pb-3 px-2">ผู้ประเมิน</th>
-                <th className="pb-3 px-2 text-center">คะแนน</th>
-                <th className="pb-3 px-2 text-center">สถานะ</th>
-                <th className="pb-3 px-2 text-right">รูปภาพ</th>
+                <th className="pb-3 px-2">{t('date')}</th>
+                <th className="pb-3 px-2">{t('location')}</th>
+                <th className="pb-3 px-2">{t('by')}</th>
+                <th className="pb-3 px-2 text-center">{t('score')}</th>
+                <th className="pb-3 px-2 text-center">Status</th>
+                <th className="pb-3 px-2 text-right">Photo</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400 text-sm italic">ไม่มีข้อมูล</td>
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-sm italic">{t('no_data')}</td>
                 </tr>
               ) : (
                 data.map(a => (
@@ -243,12 +248,12 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
                     className="table-row hover:bg-slate-50/50 dark:hover:bg-slate-800/30 cursor-pointer group"
                     onClick={() => setSelectedAssessment(a)}
                   >
-                    <td className="py-3 px-2 text-[10px] font-bold text-slate-500">{new Date(a.date).toLocaleDateString('th-TH')}</td>
+                    <td className="py-3 px-2 text-[10px] font-bold text-slate-500">{new Date(a.date).toLocaleDateString(language === 'en' ? 'en-US' : 'th-TH')}</td>
                     <td className="py-3 px-2 font-bold text-slate-900 dark:text-white text-sm group-hover:text-indigo-600 transition-colors">{a.location}</td>
                     <td className="py-3 px-2 text-xs text-slate-600 dark:text-slate-400">{a.evaluator}</td>
                     <td className={`py-3 px-2 text-center font-black ${a.score >= 80 ? 'text-emerald-600' : a.score >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{a.score}</td>
                     <td className="py-3 px-2 text-center">
-                      <span className={`text-[10px] ${getStatusColor(a.status)} text-white px-2 py-1 rounded-lg font-bold`}>{getStatusLabel(a.status)}</span>
+                      <span className={`text-[10px] ${getStatusColor(a.status)} text-white px-2 py-1 rounded-lg font-bold shadow-sm`}>{getStatusLabel(a.status)}</span>
                     </td>
                     <td className="py-3 px-2 text-right">
                       <div className="flex items-center justify-end gap-1 text-slate-400">
@@ -271,14 +276,14 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('report')}</h2>
-          <p className="text-slate-500 mt-1">สรุปผลการประเมินแยกตามหมวดหมู่</p>
+          <p className="text-slate-500 mt-1">สรุปผลการประเมินแยกตามหมวดหมู่ (เขตพื้นที่, ห้องเรียน, ห้องน้ำ)</p>
         </div>
         <div className="flex gap-2">
             <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-bold text-xs shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> พิมพ์รายงาน (PDF)
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> {language === 'th' ? 'พิมพ์รายงาน (PDF)' : 'Print Report (PDF)'}
             </button>
             <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-bold text-xs shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> ส่งออก Excel
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> {t('export_excel')}
             </button>
         </div>
       </div>
@@ -286,8 +291,8 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8 dark:bg-slate-900 dark:border-slate-800">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะ</label>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะการประเมิน</label>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white transition-all">
               <option value="">ทั้งหมด</option>
               <option value="excellent">{t('excellent')}</option>
               <option value="good">{t('good')}</option>
@@ -295,23 +300,23 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">เริ่มต้น</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">เริ่มต้นวันที่</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สิ้นสุด</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ถึงวันที่</label>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
           </div>
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={handleClearFilters} className="text-sm font-bold text-rose-500 hover:text-rose-700">ล้างตัวกรอง</button>
+          <button onClick={handleClearFilters} className="text-sm font-bold text-rose-500 hover:text-rose-700 transition-colors">ล้างตัวกรองทั้งหมด</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {renderTable('1. รายงานผล: เขตพื้นที่รับผิดชอบ (Area Zone)', areaAssessments, 'area')}
-        {renderTable('2. รายงานผล: ห้องเรียน (Classroom)', classroomAssessments, 'classroom')}
-        {renderTable('3. รายงานผล: ห้องน้ำ (Restroom)', restroomAssessments, 'restroom')}
+        {renderTable('1. ' + t('report') + ': ' + t('assessment_area'), areaAssessments, 'area')}
+        {renderTable('2. ' + t('report') + ': ' + t('assessment_classroom'), classroomAssessments, 'classroom')}
+        {renderTable('3. ' + t('report') + ': ' + t('assessment_restroom'), restroomAssessments, 'restroom')}
       </div>
 
       <AssessmentDetailModal 

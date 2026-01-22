@@ -63,7 +63,7 @@ export const translations = {
     date: "วันที่ประเมิน",
     rubric_title: "หัวข้อการประเมินและเกณฑ์รูบริก",
     level: "ระดับ",
-    upload_photos: "อัปโหลดรูปภาพหลักฐาน (สูงสุด 5 รูป)",
+    upload_photos: "อัปโหลดรูปภาพหลักฐาน (3-5 รูป)",
     click_upload: "คลิกเพื่ออัปโหลด",
     watermark_info: "ระบบจะประทับลายน้ำ วันที่/เวลา/สถานที่ อัตโนมัติ",
     remarks: "หมายเหตุเพิ่มเติม",
@@ -77,11 +77,41 @@ export const translations = {
     student_present: "มาทั้งหมด",
     student_absent: "ไม่มาทั้งหมด",
     
-    // Status
+    // Admin Tools
+    export_excel: "ส่งออก Excel",
+    import_data: "นำเข้าข้อมูล",
+    export_json: "ส่งออก JSON",
+    import_json: "นำเข้า JSON",
+    import_success: "นำเข้าข้อมูลสำเร็จ!",
+    import_error: "ไฟล์ไม่ถูกต้อง หรือเกิดข้อผิดพลาดในการนำเข้า",
+
+    // Certificate
+    cert_title: "เกียรติบัตร",
+    cert_certify: "ขอมอบเกียรติบัตรฉบับนี้เพื่อแสดงว่า",
+    cert_description: "เป็นพื้นที่ที่มีการจัดการด้านความสะอาดและสุขอนามัยดีเยี่ยมในหมวด",
+    cert_avg_score: "ได้คะแนนเฉลี่ย",
+    cert_month_of: "ประจำเดือน",
+    cert_issued_at: "ให้ไว้ ณ วันที่",
+    cert_director: "ผู้อำนวยการโรงเรียน",
+    cert_no_data: "ไม่พบข้อมูลคะแนนเฉลี่ยผ่านเกณฑ์ในเดือนนี้",
+    cert_min_score: "คะแนนเฉลี่ยสะสมต้องมากกว่า 80 คะแนนขึ้นไป",
+
+    // Status & Rubrics
     excellent: "ดีเยี่ยม",
+    very_good: "ดีมาก",
     good: "ดี",
+    fair: "พอใช้",
     needs_improvement: "ควรปรับปรุง",
-    
+    rubric_level_5: "ดีเยี่ยม",
+    rubric_level_4: "ดีมาก",
+    rubric_level_3: "ดี",
+    rubric_level_2: "พอใช้",
+    rubric_level_1: "ควรปรับปรุง",
+
+    // Months
+    jan: "ม.ค.", feb: "ก.พ.", mar: "มี.ค.", apr: "เม.ย.", may: "พ.ค.", jun: "มิ.ย.",
+    jul: "ก.ค.", aug: "ส.ค.", sep: "ก.ย.", oct: "ต.ค.", nov: "พ.ย.", dec: "ธ.ค.",
+
     developer: "พัฒนาโดย: นายธวัชชัย แก่นจักร์ ครู โรงเรียนน้ำคำวิทยา"
   },
   en: {
@@ -144,7 +174,7 @@ export const translations = {
     date: "Date",
     rubric_title: "Evaluation Criteria & Rubrics",
     level: "Level",
-    upload_photos: "Upload Evidence Photos (Max 5)",
+    upload_photos: "Upload Evidence Photos (3-5 Photos)",
     click_upload: "Click to upload",
     watermark_info: "System automatically applies watermark",
     remarks: "Additional Remarks",
@@ -158,11 +188,41 @@ export const translations = {
     student_present: "All Present",
     student_absent: "All Absent",
     
-    // Status
+    // Admin Tools
+    export_excel: "Export Excel",
+    import_data: "Import Data",
+    export_json: "Export JSON",
+    import_json: "Import JSON",
+    import_success: "Import Successful!",
+    import_error: "Invalid file or error during import",
+
+    // Certificate
+    cert_title: "Certificate",
+    cert_certify: "This certificate is awarded to certify that",
+    cert_description: "has maintained excellent cleanliness and hygiene in the category of",
+    cert_avg_score: "with an average score of",
+    cert_month_of: "for the month of",
+    cert_issued_at: "Given on",
+    cert_director: "School Director",
+    cert_no_data: "No qualified data found for this month",
+    cert_min_score: "Average score must be 80 or higher",
+
+    // Status & Rubrics
     excellent: "Excellent",
+    very_good: "Very Good",
     good: "Good",
-    needs_improvement: "Improvement Needed",
-    
+    fair: "Fair",
+    needs_improvement: "Needs Improvement",
+    rubric_level_5: "Excellent",
+    rubric_level_4: "Very Good",
+    rubric_level_3: "Good",
+    rubric_level_2: "Fair",
+    rubric_level_1: "Improvement Needed",
+
+    // Months
+    jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun",
+    jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
+
     developer: "Developed by: Mr. Thawatchai Kaenjak, Namkham Wittaya School"
   },
   is: {
@@ -185,67 +245,43 @@ export const translations = {
     criteria: "เกณฑ์ให้คะแนน",
     settings: "ตั้งค่าโรงเรียน/ระบบ",
     
-    // หน้าเข้าใช้
-    login_title: "เข้าใช้ระบบเบิ่งแยง",
-    quick_login: "บัญชีลองใช้",
-    or_use_account: "หรือใช้บัญชีของเจ้าเอง",
-    email: "ชื่อผู้ใช้",
-    password: "รหัสผ่าน",
-    login_btn: "เข้าใช้",
-    account_not_found: "บ่พบบัญชีนี้ในระบบ",
-    invalid_password: "รหัสผ่านบ่แม่น",
-    account_suspended: "บัญชีนี้ถูกล็อก",
-    
-    // ความสามารถ
-    feat_3in1: "เบิ่งแยงสามอย่างในที่เดียว",
-    feat_3in1_desc: "เขตพื้นที่ ห้องเรียน ห้องน้ำ พร้อมระบบให้คะแนน 1-5 แต้ม",
-    feat_security: "ความปลอดภัยของรูป",
-    feat_security_desc: "ปิดตราลงรูปบอกหม่อง/วัน/เวลา บนรูปหลักฐานเลย",
-    feat_attendance: "ระบบตรวจซื่อเวร",
-    feat_attendance_desc: "ดึงซื่อนักเรียนตามเขตฮับผิดชอบมาให้ตรวจซื่อเฮ็ดเวร",
-    feat_report: "วิเคราะห์ข้อมูลกับรายงาน",
-    feat_report_desc: "แผงสรุปสถิติย้อนหลัง พร้อมส่งออกเป็นไฟล์ตัวหนังสือกับตาราง",
+    // Admin Tools
+    export_excel: "ส่งออกเอ็กเซล",
+    import_data: "ดึงข้อมูลเข้า",
+    export_json: "ส่งออก JSON",
+    import_json: "นำเข้า JSON",
+    import_success: "ดึงข้อมูลเข้าเรียบร้อย!",
+    import_error: "ไฟล์บ่ถืกต้อง",
 
-    // หน้าหลัก
-    overview: "ภาพรวม",
-    overview_desc: "ติดตามคะแนนความสะอาดกับแนวโน้มแต่ละหม่อง",
-    total_assessments: "เบิ่งแยงทั้งหมด",
-    times_this_month: "ครั้งเดือนนี้",
-    trends: "แนวโน้มคะแนน",
-    top_scorers: "หม่องได้คะแนนดีคัก",
-    recent_assessments: "เบิ่งแยงล่าสุด",
-    view_all: "ดูทั้งหมด",
-    score: "คะแนน",
-    by: "โดย",
-    no_data: "ยังบ่มีข้อมูล",
-    
-    // ฟอร์มเบิ่งแยง
-    location: "หม่อง",
-    select_location: "-- เลือกหม่อง --",
-    date: "วันที่เบิ่งแยง",
-    rubric_title: "หัวข้อเบิ่งแยงกับเกณฑ์ให้คะแนน",
-    level: "ระดับ",
-    upload_photos: "แนบรูปหลักฐาน (ได้ 5 รูปสุด)",
-    click_upload: "กดเพื่อแนบรูป",
-    watermark_info: "ระบบสิปิดตราวันที่/เวลา/หม่องให้เอง",
-    remarks: "หมายเหตุเพิ่ม",
-    clear: "ล้างค่า",
-    save_assessment: "เก็บการเบิ่งแยง",
-    saving: "กำลังเก็บ...",
-    success_save: "เก็บข้อมูลแล้ว!",
-    error_save: "เกิดผิดพลาดเก็บบ่ได้",
-    duplicate_alert: "พอบันทึกเบิ่งแยงซ้ำ",
-    attendance_check: "ตรวจซื่อนักเรียน",
-    student_present: "มาเฮ็ดเวร",
-    student_absent: "บ่มาเฮ็ดเวร",
-    
+    // Certificate
+    cert_title: "ใบประกาศ",
+    cert_certify: "มอบใบประกาศฉบับนี้เพื่อยันว่า",
+    cert_description: "เป็นหม่องที่มีการจัดการความสะอาดกับสุขอนามัยดีคักในหมวด",
+    cert_avg_score: "ได้คะแนนเฉลี่ย",
+    cert_month_of: "ประจำเดือน",
+    cert_issued_at: "ให้ไว้ ณ วันที่",
+    cert_director: "ผู้อำนวยการโรงเรียน",
+    cert_no_data: "บ่พบข้อมูลคะแนนเฉลี่ยผ่านเกณฑ์ในเดือนนี้",
+    cert_min_score: "คะแนนเฉลี่ยสะสมต้องมากกว่า 80 คะแนนขึ้นไป",
+
     // สถานะ
     excellent: "ดีคัก",
+    very_good: "ดีหลาย",
     good: "ดี",
+    fair: "พอใช้",
     needs_improvement: "ควรรีบปรับปรุง",
+    rubric_level_5: "ดีคัก",
+    rubric_level_4: "ดีหลาย",
+    rubric_level_3: "ดี",
+    rubric_level_2: "พอใช้",
+    rubric_level_1: "ควรรีบปรับปรุง",
+
+    // Months
+    jan: "ม.ค.", feb: "ก.พ.", mar: "มี.ค.", apr: "เม.ย.", may: "พ.ค.", jun: "มิ.ย.",
+    jul: "ก.ค.", aug: "ส.ค.", sep: "ก.ย.", oct: "ต.ค.", nov: "พ.ย.", dec: "ธ.ค.",
     
     developer: "เฮ็ดโดย: นายธวัชชัย แก่นจักร์ ครู โรงเรียนน้ำคำวิทยา"
-}
+  }
 };
 
 interface LanguageContextType {

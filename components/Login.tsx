@@ -22,7 +22,7 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
     if (!val) return;
     
     setEmail(val);
-    setPassword('demo123'); // Default password for demo accounts
+    setPassword('demo123'); 
     setError('');
   };
 
@@ -60,6 +60,7 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
 
   const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
   const logoUrl = settings?.logo_url;
+  const showQuickLogin = settings?.showQuickLogin !== false; // Default to true if undefined
 
   const features = [
     {
@@ -91,9 +92,7 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
   return (
     <div id="login-page" className="min-h-full py-12 px-4 flex flex-col items-center justify-start overflow-auto" style={{ background: 'linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #FAF5FF 100%)' }}>
       
-      {/* Login Card */}
       <div className="w-full max-w-md mb-12 relative">
-        {/* Language Toggles */}
         <div className="absolute top-0 right-0 -mt-10 flex gap-2">
             <button onClick={() => setLanguage('th')} className={`text-xs font-bold px-2 py-1 rounded ${language === 'th' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}>TH</button>
             <button onClick={() => setLanguage('is')} className={`text-xs font-bold px-2 py-1 rounded ${language === 'is' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500'}`}>IS</button>
@@ -113,24 +112,28 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
             <p className="text-slate-500 font-semibold text-sm">{schoolName}</p>
           </div>
 
-          <div className="mb-6">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('quick_login')}</label>
-            <select 
-              className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" 
-              onChange={handleDemoSelect}
-            >
-              <option value="">-- {t('select_location') ? t('select_location').replace('-- ', '').replace(' --', '') : 'Select'} --</option>
-              <option value="admin@demo.com">👑 Admin (admin@demo.com)</option>
-              <option value="teacher@demo.com">👨‍🏫 Teacher (teacher@demo.com)</option>
-              <option value="council@demo.com">🎖️ Student Council</option>
-              <option value="student@demo.com">🎓 Student</option>
-            </select>
-          </div>
+          {showQuickLogin && (
+            <>
+              <div className="mb-6 animate-fadeIn">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('quick_login')}</label>
+                <select 
+                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" 
+                  onChange={handleDemoSelect}
+                >
+                  <option value="">-- {t('select_location') ? t('select_location').replace('-- ', '').replace(' --', '') : 'Select'} --</option>
+                  <option value="admin@demo.com">👑 Admin (admin@demo.com)</option>
+                  <option value="teacher@demo.com">👨‍🏫 Teacher (teacher@demo.com)</option>
+                  <option value="council@demo.com">🎖️ Student Council</option>
+                  <option value="student@demo.com">🎓 Student</option>
+                </select>
+              </div>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100 dark:border-slate-800"></span></div>
-            <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 dark:bg-slate-900">{t('or_use_account')}</span></div>
-          </div>
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100 dark:border-slate-800"></span></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 dark:bg-slate-900">{t('or_use_account')}</span></div>
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -176,7 +179,6 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
         </div>
       </div>
 
-      {/* Features Section */}
       <div className="w-full max-w-5xl fade-in" style={{ animationDelay: '0.2s' }}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((f, i) => (

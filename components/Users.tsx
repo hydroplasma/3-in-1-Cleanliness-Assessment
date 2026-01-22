@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { AnyData, User, Room } from '../types';
 import { dataService } from '../services/dataService';
 import Modal from './Modal';
+import { useLanguage } from '../services/i18n';
 
 interface UsersProps {
   allData: AnyData[];
 }
 
 export default function Users({ allData }: UsersProps) {
+  const { t } = useLanguage();
   const [modalOpen, setModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const users = allData.filter((d): d is User => d.type === 'user');
   const rooms = allData.filter((d): d is Room => d.type === 'room');
   
@@ -105,6 +110,77 @@ export default function Users({ allData }: UsersProps) {
     }
   };
 
+  const handleExportExcel = () => {
+    const excelContent = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"></head>
+      <body>
+        <table>
+          <tr>
+            <td style="background-color: #4F46E5; color: white; font-weight: bold;">Name</td>
+            <td style="background-color: #4F46E5; color: white; font-weight: bold;">Email</td>
+            <td style="background-color: #4F46E5; color: white; font-weight: bold;">Role</td>
+            <td style="background-color: #4F46E5; color: white; font-weight: bold;">Class</td>
+            <td style="background-color: #4F46E5; color: white; font-weight: bold;">Status</td>
+          </tr>
+          ${users.map(u => `
+            <tr>
+              <td>${u.user_name}</td>
+              <td>${u.user_email}</td>
+              <td>${u.user_role}</td>
+              <td>${u.user_class || ''}</td>
+              <td>${u.user_status}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users_export_${Date.now()}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result as string;
+        // Simplified import logic for User data (expecting JSON for reliability, but label as data transfer)
+        const importedData = JSON.parse(content);
+        if (Array.isArray(importedData)) {
+           for (const item of importedData) {
+             if (item.type === 'user' || (item.user_email && item.user_name)) {
+                await dataService.create({
+                  ...item,
+                  type: 'user',
+                  user_id: item.user_id || 'USR-' + Date.now() + Math.random(),
+                  user_created_at: item.user_created_at || new Date().toISOString()
+                });
+             }
+           }
+           alert(t('import_success'));
+        }
+      } catch (err) {
+        alert(t('import_error'));
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset
+  };
+
   const roleColors: Record<string, string> = {
     admin: 'bg-purple-100 text-purple-700',
     teacher: 'bg-blue-100 text-blue-700',
@@ -121,9 +197,22 @@ export default function Users({ allData }: UsersProps) {
 
   return (
     <div className="page-content fade-in">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">จัดการผู้ใช้งาน (User Management)</h2>
-        <p className="text-slate-500 mt-1">จัดการบัญชีผู้ใช้และสิทธิ์การเข้าถึง</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">จัดการผู้ใช้งาน (User Management)</h2>
+          <p className="text-slate-500 mt-1">จัดการบัญชีผู้ใช้และสิทธิ์การเข้าถึง</p>
+        </div>
+        <div className="flex gap-2">
+           <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-bold text-xs shadow-md">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 10l-4 4m0 0l-4-4m4 4V4" /></svg>
+              {t('export_excel')}
+           </button>
+           <button onClick={handleImportClick} className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-xl hover:bg-amber-700 transition-colors font-bold text-xs shadow-md">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0l4 4m-4-4L8 8" /></svg>
+              {t('import_data')}
+           </button>
+           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json,.csv" />
+        </div>
       </div>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">

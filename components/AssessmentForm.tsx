@@ -20,7 +20,8 @@ interface StudentAttendance {
 }
 
 export default function AssessmentForm({ type, currentUser, allData, showLoading, hideLoading, showToast }: AssessmentFormProps) {
-  const { t } = useLanguage();
+  // Use language directly from useLanguage
+  const { t, language } = useLanguage();
 
   const config = {
     area: {
@@ -192,7 +193,12 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
 
     const scoreValues = Object.values(scores) as number[];
     if (scoreValues.length === 0) {
-      showToast('Score required', 'error');
+      showToast('กรุณากรอกคะแนนการประเมินให้ครบถ้วน', 'error');
+      return;
+    }
+
+    if (processedImages.length < 3) {
+      showToast('กรุณาอัปโหลดรูปภาพหลักฐาน 3-5 รูปเพื่อบันทึกข้อมูล', 'error');
       return;
     }
 
@@ -257,7 +263,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
     }
   };
 
-  const scoreLabels: Record<number, string> = { 5: t('excellent'), 4: t('good'), 3: 'ปานกลาง', 2: 'พอใช้', 1: t('needs_improvement') };
+  const scoreLabels: Record<number, string> = { 5: t('rubric_level_5'), 4: t('rubric_level_4'), 3: t('rubric_level_3'), 2: t('rubric_level_2'), 1: t('rubric_level_1') };
   const scoreColors: Record<number, string> = { 
     5: 'bg-emerald-500 text-white', 
     4: 'bg-blue-500 text-white', 
@@ -386,7 +392,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
                                 )}
                               </div>
                               <p className={`text-xs leading-relaxed ${isSelected ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-500 dark:text-slate-500'}`}>
-                                {rubricDescription || 'ไม่ได้ระบุคำอธิบายเกณฑ์'}
+                                {rubricDescription || 'No rubric description provided'}
                               </p>
                             </div>
                             
@@ -427,6 +433,12 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
                 </div>
               ))}
             </div>
+            {processedImages.length < 3 && (
+              <p className="mt-3 text-xs font-bold text-rose-500 animate-pulse flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                {language === 'th' ? 'กรุณาอัปโหลดรูปภาพหลักฐานอย่างน้อย 3 รูป (3-5 รูป)' : 'Please upload at least 3 evidence photos (3-5 photos)'}
+              </p>
+            )}
           </div>
 
           <div>
