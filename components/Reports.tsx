@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { AnyData, Assessment, SystemSettings } from '../types';
 import AssessmentDetailModal from './AssessmentDetailModal';
+import { useLanguage } from '../services/i18n';
 
 interface ReportsProps {
   allData: AnyData[];
@@ -11,6 +12,7 @@ interface ReportsProps {
 }
 
 export default function Reports({ allData, showLoading, hideLoading, showToast }: ReportsProps) {
+  const { t } = useLanguage();
   const [filterStatus, setFilterStatus] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -19,7 +21,6 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
   const assessments = allData.filter((d): d is Assessment => d.type === 'assessment');
   const settings = allData.find(d => d.type === 'settings') as SystemSettings;
 
-  // Helper to apply global filters
   const applyFilters = (list: Assessment[]) => {
     return list.filter(a => {
       if (filterStatus && a.status !== filterStatus) return false;
@@ -52,7 +53,6 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       return;
     }
     
-    // Create print layout
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -76,6 +76,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
         <head>
           <title>รายงานสรุปผลการประเมินความสะอาด</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body { font-family: 'Sarabun', sans-serif; padding: 40px; color: #333; }
             .header { text-align: center; margin-bottom: 30px; }
             .school-name { font-size: 24px; font-weight: bold; }
@@ -84,7 +85,6 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
             th { background-color: #f2f2f2; border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; }
             .summary { margin-top: 30px; padding: 20px; border: 1px solid #eee; background: #fafafa; border-radius: 8px; }
             .signature { margin-top: 50px; float: right; text-align: center; width: 250px; }
-            @media print { .no-print { display: none; } }
           </style>
         </head>
         <body>
@@ -119,9 +119,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
              ( ${settings?.executives || '...........................................'} )<br/>
              ตำแหน่ง .........................................
           </div>
-          <script>
-            window.onload = function() { window.print(); };
-          </script>
+          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `);
@@ -133,52 +131,39 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       showToast('ไม่มีข้อมูลให้ส่งออก', 'error');
       return;
     }
-
-    showLoading('กำลังจัดเตรียมไฟล์ Excel...');
-
+    showLoading(t('loading'));
     setTimeout(() => {
       const schoolName = settings?.school_name || 'School';
       const excelContent = `
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-          <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
-          <style>
-            .title { font-size: 16pt; font-weight: bold; text-align: center; }
-            .header { background-color: #4F46E5; color: white; font-weight: bold; text-align: center; border: 0.5pt solid #000; }
-            .cell { border: 0.5pt solid #ccc; text-align: left; }
-            .score { text-align: center; font-weight: bold; }
-          </style>
-        </head>
+        <head><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"></head>
         <body>
           <table>
-            <tr><td colspan="6" class="title">รายงานสรุปการประเมินความสะอาด - ${schoolName}</td></tr>
-            <tr><td colspan="6" style="text-align: center;">ข้อมูล ณ วันที่ ${new Date().toLocaleDateString('th-TH')}</td></tr>
-            <tr></tr>
+            <tr><td colspan="7" style="font-size: 16pt; font-weight: bold; text-align: center;">รายงานสรุปการประเมินความสะอาด - ${schoolName}</td></tr>
             <tr>
-              <td class="header">ลำดับ</td>
-              <td class="header">วันที่ประเมิน</td>
-              <td class="header">สถานที่/ห้อง</td>
-              <td class="header">ประเภทการประเมิน</td>
-              <td class="header">คะแนน (เต็ม 100)</td>
-              <td class="header">สถานะ</td>
-              <td class="header">ผู้ประเมิน</td>
+              <td style="background-color: #4F46E5; color: white;">ลำดับ</td>
+              <td style="background-color: #4F46E5; color: white;">วันที่</td>
+              <td style="background-color: #4F46E5; color: white;">สถานที่/ห้อง</td>
+              <td style="background-color: #4F46E5; color: white;">ประเภท</td>
+              <td style="background-color: #4F46E5; color: white;">คะแนน</td>
+              <td style="background-color: #4F46E5; color: white;">สถานะ</td>
+              <td style="background-color: #4F46E5; color: white;">ผู้ประเมิน</td>
             </tr>
             ${totalFiltered.map((a, i) => `
               <tr>
-                <td class="cell" style="text-align:center;">${i+1}</td>
-                <td class="cell">${a.date}</td>
-                <td class="cell">${a.location}</td>
-                <td class="cell">${a.assessment_type}</td>
-                <td class="cell score">${a.score}</td>
-                <td class="cell" style="text-align:center;">${getStatusLabel(a.status)}</td>
-                <td class="cell">${a.evaluator}</td>
+                <td>${i+1}</td>
+                <td>${a.date}</td>
+                <td>${a.location}</td>
+                <td>${a.assessment_type}</td>
+                <td>${a.score}</td>
+                <td>${getStatusLabel(a.status)}</td>
+                <td>${a.evaluator}</td>
               </tr>
             `).join('')}
           </table>
         </body>
         </html>
       `;
-
       const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -189,7 +174,16 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       document.body.removeChild(a);
       hideLoading();
       showToast('ส่งออกไฟล์ Excel สำเร็จ', 'success');
-    }, 1500);
+    }, 1000);
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'excellent': return t('excellent');
+      case 'good': return t('good');
+      case 'needs_improvement': return t('needs_improvement');
+      default: return status;
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -201,20 +195,11 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
     }
   };
 
-  const getStatusLabel = (status: string) => {
-      switch (status) {
-        case 'excellent': return 'ดีเยี่ยม';
-        case 'good': return 'ดี';
-        case 'needs_improvement': return 'ควรปรับปรุง';
-        default: return status;
-      }
-  };
-
   const renderTable = (title: string, data: Assessment[], type: 'area' | 'classroom' | 'restroom') => {
     const config = {
-      area: { color: 'blue', label: 'เขตพื้นที่' },
-      classroom: { color: 'emerald', label: 'ห้องเรียน' },
-      restroom: { color: 'amber', label: 'ห้องน้ำ' }
+      area: { color: 'blue', label: t('assessment_area') },
+      classroom: { color: 'emerald', label: t('assessment_classroom') },
+      restroom: { color: 'amber', label: t('assessment_restroom') }
     }[type];
 
     const typeAvg = data.length 
@@ -230,7 +215,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
             <span className={`text-[10px] bg-${config.color}-100 text-${config.color}-700 px-2 py-0.5 rounded-full font-bold`}>{data.length} รายการ</span>
           </div>
           <div className="text-right">
-             <p className="text-[10px] text-slate-400 font-bold uppercase">คะแนนเฉลี่ยส่วนนี้</p>
+             <p className="text-[10px] text-slate-400 font-bold uppercase">คะแนนเฉลี่ย</p>
              <p className={`text-lg font-black text-${config.color}-600`}>{typeAvg}</p>
           </div>
         </div>
@@ -249,7 +234,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400 text-sm italic">ไม่มีข้อมูลการประเมินในส่วนนี้</td>
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-sm italic">ไม่มีข้อมูล</td>
                 </tr>
               ) : (
                 data.map(a => (
@@ -259,12 +244,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
                     onClick={() => setSelectedAssessment(a)}
                   >
                     <td className="py-3 px-2 text-[10px] font-bold text-slate-500">{new Date(a.date).toLocaleDateString('th-TH')}</td>
-                    <td className="py-3 px-2 font-bold text-slate-900 dark:text-white text-sm group-hover:text-indigo-600 transition-colors">
-                      <div className="flex items-center gap-2">
-                        {a.location}
-                        <svg className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                      </div>
-                    </td>
+                    <td className="py-3 px-2 font-bold text-slate-900 dark:text-white text-sm group-hover:text-indigo-600 transition-colors">{a.location}</td>
                     <td className="py-3 px-2 text-xs text-slate-600 dark:text-slate-400">{a.evaluator}</td>
                     <td className={`py-3 px-2 text-center font-black ${a.score >= 80 ? 'text-emerald-600' : a.score >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{a.score}</td>
                     <td className="py-3 px-2 text-center">
@@ -290,8 +270,8 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
     <div className="page-content fade-in">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">รายงานแยกตามหมวดหมู่ (Categorized Reports)</h2>
-          <p className="text-slate-500 mt-1">สรุปผลการประเมินแยกตามประเภทพื้นที่ ห้องเรียน และห้องน้ำ</p>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('report')}</h2>
+          <p className="text-slate-500 mt-1">สรุปผลการประเมินแยกตามหมวดหมู่</p>
         </div>
         <div className="flex gap-2">
             <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-bold text-xs shadow-md">
@@ -303,29 +283,28 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
         </div>
       </div>
 
-      {/* Global Filter Bar */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8 dark:bg-slate-900 dark:border-slate-800">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะ (Status)</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะ</label>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white">
               <option value="">ทั้งหมด</option>
-              <option value="excellent">ดีเยี่ยม (Excellent)</option>
-              <option value="good">ดี (Good)</option>
-              <option value="needs_improvement">ควรปรับปรุง (Needs Improvement)</option>
+              <option value="excellent">{t('excellent')}</option>
+              <option value="good">{t('good')}</option>
+              <option value="needs_improvement">{t('needs_improvement')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ช่วงวันที่เริ่มต้น</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">เริ่มต้น</label>
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ถึงวันที่</label>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สิ้นสุด</label>
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
           </div>
         </div>
         <div className="mt-4 flex justify-end">
-          <button onClick={handleClearFilters} className="text-sm font-bold text-rose-500 hover:text-rose-700">ล้างตัวกรองทั้งหมด</button>
+          <button onClick={handleClearFilters} className="text-sm font-bold text-rose-500 hover:text-rose-700">ล้างตัวกรอง</button>
         </div>
       </div>
 
@@ -334,14 +313,6 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
         {renderTable('2. รายงานผล: ห้องเรียน (Classroom)', classroomAssessments, 'classroom')}
         {renderTable('3. รายงานผล: ห้องน้ำ (Restroom)', restroomAssessments, 'restroom')}
       </div>
-      
-      {totalFiltered.length === 0 && (
-          <div className="bg-amber-50 border border-amber-200 p-12 rounded-3xl text-center dark:bg-amber-900/20 dark:border-amber-800">
-             <svg className="w-16 h-16 mx-auto text-amber-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
-             <h3 className="text-lg font-bold text-amber-800 dark:text-amber-400">ไม่พบข้อมูลตามเงื่อนไขที่กำหนด</h3>
-             <p className="text-amber-600 dark:text-amber-500 text-sm mt-1">กรุณาลองเปลี่ยนเงื่อนไขการกรองหรือช่วงวันที่</p>
-          </div>
-      )}
 
       <AssessmentDetailModal 
         isOpen={!!selectedAssessment} 
