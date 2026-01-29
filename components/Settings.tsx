@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { SystemSettings } from '../types';
+import { useLanguage } from '../services/i18n';
 
 export default function Settings() {
+  const { t } = useLanguage();
   const [settings, setSettings] = useState<SystemSettings>({
      type: 'settings',
      telegram_token: '',
@@ -15,7 +17,7 @@ export default function Settings() {
      school_name: '',
      school_affiliation: '',
      executives: '',
-     logo_url: '',
+     logo_url: 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png',
      showQuickLogin: true,
      reminder_daily: {
        1: '08:30', 2: '08:30', 3: '08:30', 4: '08:30', 5: '08:30', 6: '', 0: ''
@@ -51,6 +53,13 @@ export default function Settings() {
      
      setSaved(true);
      setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleClearCache = () => {
+    if (confirm(t('confirm_clear_cache'))) {
+      localStorage.removeItem("cached_data");
+      window.location.reload();
+    }
   };
 
   const dayLabels = [
@@ -128,6 +137,18 @@ export default function Settings() {
                  </button>
                ))}
             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 border-t-4 border-t-rose-500">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">การดูแลระบบ (Maintenance)</h3>
+            <p className="text-xs text-slate-500 mb-4">หากพบว่าข้อมูลในแอปไม่อัปเดตเป็นล่าสุดตามเซิร์ฟเวอร์ หรือพบปัญหาการแสดงผลผิดพลาด</p>
+            <button 
+              onClick={handleClearCache}
+              className="w-full py-3 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold text-sm border border-rose-200 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              {t('clear_cache')}
+            </button>
           </div>
         </div>
       </div>

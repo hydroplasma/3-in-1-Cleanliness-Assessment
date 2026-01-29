@@ -109,6 +109,10 @@ export const translations = {
     rubric_level_2: "พอใช้",
     rubric_level_1: "ควรปรับปรุง",
 
+    // Maintenance
+    clear_cache: "ล้างแคชข้อมูล",
+    confirm_clear_cache: "คุณแน่ใจหรือไม่ว่าต้องการล้างแคชข้อมูล? ระบบจะโหลดข้อมูลใหม่จากเซิร์ฟเวอร์",
+
     // Months
     jan: "ม.ค.", feb: "ก.พ.", mar: "มี.ค.", apr: "เม.ย.", may: "พ.ค.", jun: "มิ.ย.",
     jul: "ก.ค.", aug: "ส.ค.", sep: "ก.ย.", oct: "ต.ค.", nov: "พ.ย.", dec: "ธ.ค.",
@@ -221,6 +225,10 @@ export const translations = {
     rubric_level_2: "Fair",
     rubric_level_1: "Improvement Needed",
 
+    // Maintenance
+    clear_cache: "Clear Cache",
+    confirm_clear_cache: "Are you sure you want to clear the cache? The system will reload data from the server.",
+
     // Months
     jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun",
     jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
@@ -282,6 +290,10 @@ export const translations = {
     rubric_level_3: "ดี",
     rubric_level_2: "พอใช้",
     rubric_level_1: "ควรรีบปรับปรุง",
+
+    // Maintenance
+    clear_cache: "ล้างแคชข้อมูล",
+    confirm_clear_cache: "เจ้าแน่ใจบ่ว่าสิล้างแคชข้อมูล? ระบบสิโหลดข้อมูลใหม่จากเซิร์ฟเวอร์",
 
     // Months
     jan: "ม.ค.", feb: "ก.พ.", mar: "มี.ค.", apr: "เม.ย.", may: "พ.ค.", jun: "มิ.ย.",

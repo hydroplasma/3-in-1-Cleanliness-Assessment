@@ -4,7 +4,7 @@ import { AnyData, Criterion, Room, User, SystemSettings } from "../types";
 // ==================================================================================
 // ⚠️ สำคัญ: ใส่ URL ของ Web App ที่ได้จากการ Deploy Google Apps Script ตรงนี้
 // ==================================================================================
-const API_URL = "INSERT_YOUR_GAS_WEB_APP_URL_HERE"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbzYXObbFWH907VtLu-BGcuSenbfmlHO7b-y5Y1ZNeHrqSd91MJUF9U8MICXrwYe5YFf_w/exec"; 
 
 class DataService {
   private data: AnyData[] = [];
@@ -158,23 +158,174 @@ class DataService {
         } as Room);
     });
 
-    // Users
+    // Get all room names to assign permissions to teachers/admins
+    const allRoomNames = initialData.filter(d => d.type === 'room').map((r: any) => r.room_name);
+
+    // Users (Imported List)
     const mockAccounts = [
-        { name: "ผู้ดูแลระบบ", email: "admin@demo.com", role: "admin" as const },
-        { name: "คุณครูทดสอบ", email: "teacher@demo.com", role: "teacher" as const },
-        { name: "สภานักเรียน", email: "council@demo.com", role: "student_council" as const },
-        { name: "นักเรียนทดสอบ", email: "student@demo.com", role: "student" as const },
+      // M.1
+      { name: "กฤษฎา กาลทรัพย์", email: "nkw01477@school.demo", role: "student", class: "ม.1" },
+      { name: "กฤษฎาการ์ณ มุ่งสอน", email: "nkw01478@school.demo", role: "student", class: "ม.1" },
+      { name: "ชินนทร์ ไชยมบุญมา", email: "nkw01479@school.demo", role: "student", class: "ม.1" },
+      { name: "ทินภัทร โดงบททด", email: "nkw01480@school.demo", role: "student", class: "ม.1" },
+      { name: "นิติรัฐ คำใสย", email: "nkw01481@school.demo", role: "student", class: "ม.1" },
+      { name: "ปัญญาภรณ์ มัสที", email: "nkw01482@school.demo", role: "student", class: "ม.1" },
+      { name: "ภานุพงศ์ คานขุนไทย", email: "nkw01483@school.demo", role: "student", class: "ม.1" },
+      { name: "สวรินทร์ พักกษา", email: "nkw01484@school.demo", role: "student", class: "ม.1" },
+      { name: "อิทธิฒน์ไชย ปรามิถย", email: "nkw01485@school.demo", role: "student", class: "ม.1" },
+      { name: "เบญญาภา แก้วประสงค์", email: "nkw01486@school.demo", role: "student", class: "ม.1" },
+      { name: "กญญารัตน์ สาโดด", email: "nkw01487@school.demo", role: "student", class: "ม.1" },
+      { name: "ชาลิศา นามพล", email: "nkw01488@school.demo", role: "student", class: "ม.1" },
+      { name: "ปิชชญา เสลานอก", email: "nkw01489@school.demo", role: "student", class: "ม.1" },
+      { name: "ปาริชาติ สะอาด", email: "nkw01490@school.demo", role: "student", class: "ม.1" },
+      { name: "สวีรปา เจยงค์", email: "nkw01491@school.demo", role: "student", class: "ม.1" },
+      { name: "สภัทรวี ปยะวงศ์", email: "nkw01492@school.demo", role: "student", class: "ม.1" },
+      { name: "อักสรา พ่ไชขาว", email: "nkw01493@school.demo", role: "student", class: "ม.1" },
+      
+      // M.2
+      { name: "จักรีภทร ดาละ", email: "nkw01455@school.demo", role: "student", class: "ม.2" },
+      { name: "ฐานะพงษ์ ขันแก้ว", email: "nkw01456@school.demo", role: "student", class: "ม.2" },
+      { name: "เตชัส กิ่งแก้ว", email: "nkw01457@school.demo", role: "student", class: "ม.2" },
+      { name: "เทวฤทธิ์ พรหมปาถัต", email: "nkw01458@school.demo", role: "student", class: "ม.2" },
+      { name: "ธนัญกันต์ บุตรใส", email: "nkw01459@school.demo", role: "student", class: "ม.2" },
+      { name: "รชพล ยุคุณธ", email: "nkw01460@school.demo", role: "student", class: "ม.2" },
+      { name: "อิชชา สิทธิกุล", email: "nkw01461@school.demo", role: "student", class: "ม.2" },
+      { name: "อัครเดชา สัปดัด", email: "nkw01462@school.demo", role: "student", class: "ม.2" },
+      { name: "จันทราพร หาญภิรมย์", email: "nkw01463@school.demo", role: "student", class: "ม.2" },
+      { name: "จิรัชต้น กัดนิจจันทร์", email: "nkw01464@school.demo", role: "student", class: "ม.2" },
+      { name: "จิรัชญา หว่างแสง", email: "nkw01465@school.demo", role: "student", class: "ม.2" },
+      { name: "ชลลดา แสงศร", email: "nkw01466@school.demo", role: "student", class: "ม.2" },
+      { name: "ณินิตา ดวงมาลา", email: "nkw01467@school.demo", role: "student", class: "ม.2" },
+      { name: "ธยา รุ่งสว่าง", email: "nkw01468@school.demo", role: "student", class: "ม.2" },
+      { name: "ดาริรัตน์ ต้นธร", email: "nkw01469@school.demo", role: "student", class: "ม.2" },
+      { name: "บุษจิรา โป่งทอง", email: "nkw01470@school.demo", role: "student", class: "ม.2" },
+      { name: "อารยา ไชยลา", email: "nkw01471@school.demo", role: "student", class: "ม.2" },
+
+      // M.3
+      { name: "กัญญ์ วิลัย", email: "nkw01423@school.demo", role: "student", class: "ม.3" },
+      { name: "กมลภพ โค้ขี้ยิ่ง", email: "nkw01424@school.demo", role: "student", class: "ม.3" },
+      { name: "ณรงค์ศักดิ์ เกษสระ", email: "nkw01425@school.demo", role: "student", class: "ม.3" },
+      { name: "ทักษดนัย วายอัครัช", email: "nkw01426@school.demo", role: "student", class: "ม.3" },
+      { name: "ธนวัฒน์ วิชัยรุกุล", email: "nkw01428@school.demo", role: "student", class: "ม.3" },
+      { name: "ธนากร ไชยณารา", email: "nkw01429@school.demo", role: "student", class: "ม.3" },
+      { name: "นันทภพ จันทรา", email: "nkw01430@school.demo", role: "student", class: "ม.3" },
+      { name: "พชร สัปดัด", email: "nkw01431@school.demo", role: "student", class: "ม.3" },
+      { name: "พร้อมฝน อาบทอง", email: "nkw01432@school.demo", role: "student", class: "ม.3" },
+      { name: "มงคลราช ฤทธาพรม", email: "nkw01433@school.demo", role: "student", class: "ม.3" },
+      { name: "รัชชา ดาววงค์", email: "nkw01476@school.demo", role: "student", class: "ม.3" },
+      { name: "วรภพ ไชยลา", email: "nkw01434@school.demo", role: "student", class: "ม.3" },
+      { name: "วรุฒศกร ช่วยนา", email: "nkw01435@school.demo", role: "student", class: "ม.3" },
+      { name: "วิฒเดช ดวงมาลา", email: "nkw01436@school.demo", role: "student", class: "ม.3" },
+      { name: "อรรถพร บุญหวาน", email: "nkw01438@school.demo", role: "student", class: "ม.3" },
+      { name: "อิทธิพัทธ์ ดาววงค์", email: "nkw01439@school.demo", role: "student", class: "ม.3" },
+      { name: "กิ่งแก้ว สัปดัด", email: "nkw01441@school.demo", role: "student", class: "ม.3" },
+      { name: "ชิตกาญจน์ ฉาบไธสง", email: "nkw01442@school.demo", role: "student", class: "ม.3" },
+      { name: "นภาพร มีเนวรรณ", email: "nkw01443@school.demo", role: "student", class: "ม.3" },
+      { name: "พรทิพย์ นุนนวน", email: "nkw01444@school.demo", role: "student", class: "ม.3" },
+      { name: "วิภาพร บุญหวาน", email: "nkw01446@school.demo", role: "student", class: "ม.3" },
+      { name: "สมฤทัย นามพล", email: "nkw01447@school.demo", role: "student", class: "ม.3" },
+      { name: "อนุชจีร นวลใส", email: "nkw01448@school.demo", role: "student", class: "ม.3" },
+
+      // M.4
+      { name: "ขวัญชัย เสมอไชย", email: "nkw01393@school.demo", role: "student", class: "ม.4" },
+      { name: "ชนาธิป ปรินทร์", email: "nkw01394@school.demo", role: "student", class: "ม.4" },
+      { name: "ตติย รุ่งสว่าง", email: "nkw01395@school.demo", role: "student", class: "ม.4" },
+      { name: "ธระพล คาเคน", email: "nkw01398@school.demo", role: "student", class: "ม.4" },
+      { name: "ธรัภัทร คาเคน", email: "nkw01400@school.demo", role: "student", class: "ม.4" },
+      { name: "อัครพล อินทร์เอม", email: "nkw01410@school.demo", role: "student", class: "ม.4" },
+      { name: "ณฏฐรินชา ปรามิถย", email: "nkw01411@school.demo", role: "student", class: "ม.4" },
+      { name: "พรรณรัก ศิลปชัย", email: "nkw01454@school.demo", role: "student", class: "ม.4" },
+      { name: "มลฑกานต์ ปรามิถย", email: "nkw01494@school.demo", role: "student", class: "ม.4" },
+      { name: "อรปรียา ป้องกัน", email: "nkw01419@school.demo", role: "student", class: "ม.4" },
+      { name: "วัชรุรัฒ กาลทรัพย์", email: "nkw01405@school.demo", role: "student", class: "ม.4" },
+      { name: "ปิยมิตร อุ่นเสนีย์", email: "nkw01415@school.demo", role: "student", class: "ม.4" },
+      { name: "พิตตา โป่งทอง", email: "nkw01417@school.demo", role: "student", class: "ม.4" },
+      { name: "วรรณนกานต์ ยมรัมย์", email: "nkw01495@school.demo", role: "student", class: "ม.4" },
+
+      // M.5
+      { name: "ชนชัย เพชรขาว", email: "nkw01367@school.demo", role: "student", class: "ม.5" },
+      { name: "ต้นย มหาราช", email: "nkw01369@school.demo", role: "student", class: "ม.5" },
+      { name: "นันทวัน ทองสาย", email: "nkw01371@school.demo", role: "student", class: "ม.5" },
+      { name: "ปริสิทธิ์ นุนนวน", email: "nkw01373@school.demo", role: "student", class: "ม.5" },
+      { name: "ศุภกิณห์ ประเสริฐ", email: "nkw01378@school.demo", role: "student", class: "ม.5" },
+      { name: "ธีรชิต นวลใส", email: "nkw01472@school.demo", role: "student", class: "ม.5" },
+      { name: "จิรัญญา พงแพง", email: "nkw01473@school.demo", role: "student", class: "ม.5" },
+      { name: "ปโลดา บุญพบ", email: "nkw01383@school.demo", role: "student", class: "ม.5" },
+      { name: "มุขิรญ ทองสาย", email: "nkw01386@school.demo", role: "student", class: "ม.5" },
+      { name: "วรรณษา อินทร์ดา", email: "nkw01474@school.demo", role: "student", class: "ม.5" },
+      { name: "สัรญญา พรหมมา", email: "nkw01389@school.demo", role: "student", class: "ม.5" },
+      { name: "อรอมล มัชชัย", email: "nkw01475@school.demo", role: "student", class: "ม.5" },
+
+      // M.6
+      { name: "กนกพล ผาพรรณ", email: "nkw01335@school.demo", role: "student", class: "ม.6" },
+      { name: "ชาคริ บตรงาม", email: "nkw01364@school.demo", role: "student", class: "ม.6" },
+      { name: "ฐาปกรณ์ ปรทิพย์อประชา", email: "nkw01336@school.demo", role: "student", class: "ม.6" },
+      { name: "ธนัวฒน์ ผาชิน", email: "nkw01338@school.demo", role: "student", class: "ม.6" },
+      { name: "ธนะชัย ไชยังคัน", email: "nkw01339@school.demo", role: "student", class: "ม.6" },
+      { name: "ภาวิวัฒน์ พรมมิต", email: "nkw01341@school.demo", role: "student", class: "ม.6" },
+      { name: "วชชากร สุมาลัย", email: "nkw01342@school.demo", role: "student", class: "ม.6" },
+      { name: "ศุภสิทธิ์ ชาวเกวียน", email: "nkw01343@school.demo", role: "student", class: "ม.6" },
+      { name: "อัครวินท์ อาบทอง", email: "nkw01345@school.demo", role: "student", class: "ม.6" },
+      { name: "อภิสิทธิ์ แก่นนาคำ", email: "nkw01346@school.demo", role: "student", class: "ม.6" },
+      { name: "กริธแก้ว โรมาลา", email: "nkw01347@school.demo", role: "student", class: "ม.6" },
+      { name: "ณัฏฐนิช ดวงมาลา", email: "nkw01348@school.demo", role: "student", class: "ม.6" },
+      { name: "ธนชนก พรมมา", email: "nkw01351@school.demo", role: "student", class: "ม.6" },
+      { name: "ธดาวรรณ พรหมัคคัด", email: "nkw01350@school.demo", role: "student", class: "ม.6" },
+      { name: "ปิพชญา ภิมังนิทก", email: "nkw01352@school.demo", role: "student", class: "ม.6" },
+      { name: "พมชนก พันธขาว", email: "nkw01354@school.demo", role: "student", class: "ม.6" },
+      { name: "ศิกสรา ธรรมคุณ", email: "nkw01357@school.demo", role: "student", class: "ม.6" },
+      { name: "สาริศา แสงศร", email: "nkw01358@school.demo", role: "student", class: "ม.6" },
+      { name: "สุพิชญา คานขุนไทย", email: "nkw01359@school.demo", role: "student", class: "ม.6" },
+      { name: "อภิดา บุญหนัก", email: "nkw01361@school.demo", role: "student", class: "ม.6" },
+
+      // Student Council
+      { name: "สภานักเรียน ม.1", email: "sapa101@school.demo", role: "student_council", class: "ม.1" },
+      { name: "สภานักเรียน ม.2", email: "sapa201@school.demo", role: "student_council", class: "ม.2" },
+      { name: "สภานักเรียน ม.3", email: "sapa301@school.demo", role: "student_council", class: "ม.3" },
+      { name: "สภานักเรียน ม.4", email: "sapa401@school.demo", role: "student_council", class: "ม.4" },
+      { name: "สภานักเรียน ม.5", email: "sapa501@school.demo", role: "student_council", class: "ม.5" },
+      { name: "สภานักเรียน ม.6", email: "sapa601@school.demo", role: "student_council", class: "ม.6" },
+
+      // Admin & Teachers
+      { name: "นายกิตติพงษ์ บุญสาร", email: "admin01@school.demo", role: "admin", class: "" },
+      { name: "นางสาววิลัยลักษณ์ หาญสิงห์", email: "admin02@school.demo", role: "teacher", class: "" },
+      { name: "นายกัมปนาท คันธร", email: "teacher01@school.demo", role: "teacher", class: "ม.3" },
+      { name: "นายชาตรี ทินดา", email: "teacher02@school.demo", role: "teacher", class: "ม.4" },
+      { name: "นางสาวสลักสตรี จดักกิด", email: "teacher03@school.demo", role: "teacher", class: "ม.2" },
+      { name: "นางสาวสุนีย์ โป่งทอง", email: "teacher04@school.demo", role: "teacher", class: "ม.2" },
+      { name: "นางสาวรัตติกานต์ ขอเจริญ", email: "teacher05@school.demo", role: "teacher", class: "ม.6" },
+      { name: "นายธวัชชัย แก่นจักร์", email: "teacher06@school.demo", role: "admin", class: "" }, // Admin Role
+      { name: "นางสาวนิศิมา ศรีดวง", email: "teacher07@school.demo", role: "teacher", class: "ม.1" },
+      { name: "นางสาวพชรพร พิมพ์สาร", email: "teacher08@school.demo", role: "teacher", class: "ม.4" },
+      { name: "นางสาวภริณภัทร์ เมธา", email: "teacher09@school.demo", role: "teacher", class: "ม.5" },
+      { name: "นางสาวสิรินทร์ บุญนบผา", email: "teacher10@school.demo", role: "teacher", class: "ม.4" },
+      { name: "นางกานติ์สิริ สูงใย", email: "teacher11@school.demo", role: "teacher", class: "ม.1" },
+      { name: "นางหอมไกล นำจำปา", email: "teacher12@school.demo", role: "teacher", class: "ม.4" },
+      { name: "นายธิติศ นามินพพรรณ", email: "teacher13@school.demo", role: "teacher", class: "ม.6" }
     ];
+
     mockAccounts.forEach(acc => {
+        let assigned: string[] = [];
+        const role = acc.role.toLowerCase();
+        
+        // Teachers, Admin, Student Council get access to all rooms for demo purposes
+        if (role === 'teacher' || role === 'student_council' || role === 'admin') {
+            assigned = allRoomNames;
+        }
+
+        // Generate ID from Email (e.g. nkw01477) or fallback
+        const uid = acc.email.split('@')[0];
+
         initialData.push({
             type: 'user',
-            user_id: 'USR-' + Date.now() + Math.random(),
+            user_id: uid,
             user_name: acc.name,
             user_email: acc.email,
             password: 'demo123',
-            user_role: acc.role,
+            user_role: role as any,
+            user_class: acc.class,
             user_status: 'active',
-            assigned_locations: acc.role === 'admin' ? [] : ["ม.1", "ม.2", "เขตพื้นที่ 1"],
+            assigned_locations: assigned,
             user_created_at: new Date().toISOString(),
             __backendId: `BID-${Date.now()}-${Math.random()}`
         } as User);
@@ -192,7 +343,7 @@ class DataService {
         school_name: 'โรงเรียนน้ำคำวิทยา',
         school_affiliation: 'สังกัดองค์การบริหารส่วนจังหวัดศรีสะเกษ',
         executives: 'ผู้บริหารโรงเรียน',
-        logo_url: '',
+        logo_url: 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png',
         showQuickLogin: true,
         __backendId: `SET-${Date.now()}`
     } as SystemSettings);

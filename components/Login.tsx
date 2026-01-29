@@ -12,6 +12,7 @@ interface LoginProps {
 export default function Login({ onLogin, settings, allData }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { t, setLanguage, language } = useLanguage();
 
@@ -54,12 +55,13 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
       role: foundUser.user_role,
       userName: foundUser.user_name,
       initials: foundUser.user_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2),
-      assigned_locations: foundUser.assigned_locations
+      assigned_locations: foundUser.assigned_locations,
+      user_class: foundUser.user_class
     });
   };
 
   const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
-  const logoUrl = settings?.logo_url;
+  const logoUrl = settings?.logo_url || 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png';
   const showQuickLogin = settings?.showQuickLogin !== false; // Default to true if undefined
 
   const features = [
@@ -121,10 +123,10 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
                   onChange={handleDemoSelect}
                 >
                   <option value="">{t('select_user_role')}</option>
-                  <option value="admin@demo.com">👑 Admin (admin@demo.com)</option>
-                  <option value="teacher@demo.com">👨‍🏫 Teacher (teacher@demo.com)</option>
-                  <option value="council@demo.com">🎖️ Student Council</option>
-                  <option value="student@demo.com">🎓 Student</option>
+                  <option value="admin01@school.demo">👑 Admin (admin01)</option>
+                  <option value="teacher01@school.demo">👨‍🏫 Teacher (teacher01)</option>
+                  <option value="sapa601@school.demo">🎖️ Student Council (M.6)</option>
+                  <option value="nkw01477@school.demo">🎓 Student (M.1)</option>
                 </select>
               </div>
 
@@ -142,7 +144,7 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
                 <input 
                   type="email" 
                   className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
-                  placeholder="email@school.com"
+                  placeholder=""
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -154,21 +156,35 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('password')}</label>
               <div className="relative">
                 <input 
-                  type="password" 
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
-                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  className="w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
+                  placeholder=""
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                 />
                 <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.882 9.882L5.146 5.147m13.71 13.71L14.117 14.117M19.071 4.929l-4.242 4.242" /></svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
               </div>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-center gap-2 animate-pulse">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                {error}
+              <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex flex-col gap-1 animate-pulse border border-red-100">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  {error}
+                </div>
               </div>
             )}
 

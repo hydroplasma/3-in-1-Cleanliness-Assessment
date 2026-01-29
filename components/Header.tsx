@@ -19,7 +19,7 @@ export default function Header({ user, onLogout, toggleMobileMenu, toggleNotific
   const { language, setLanguage, t } = useLanguage();
 
   const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
-  const logoUrl = settings?.logo_url;
+  const logoUrl = settings?.logo_url || 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png';
 
   return (
     <header className="gradient-header text-white shadow-xl fixed top-0 left-0 right-0 z-50 transition-colors duration-300">

@@ -18,7 +18,9 @@ import Certificates from './components/Certificates';
 import { LanguageProvider, useLanguage } from './services/i18n';
 
 function AppContent() {
+  // Initialize currentUser as null to require login
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  
   const [activePage, setActivePage] = useState('dashboard');
   const [allData, setAllData] = useState<AnyData[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,6 +37,19 @@ function AppContent() {
   const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    // 1. Restore Session from LocalStorage
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setCurrentUser(parsedUser);
+      } catch (e) {
+        console.error("Failed to restore session", e);
+        localStorage.removeItem('currentUser');
+      }
+    }
+
+    // 2. Restore Dark Mode
     const savedDarkMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedDarkMode);
     if (savedDarkMode) {
@@ -43,6 +58,7 @@ function AppContent() {
       document.documentElement.classList.remove('dark');
     }
 
+    // 3. Subscribe to Data Service
     const unsubscribe = dataService.subscribe((data) => {
       setAllData(data);
       const settings = data.find(d => d.type === 'settings') as SystemSettings;
@@ -51,12 +67,10 @@ function AppContent() {
         if (settings.themeColor && settings.themeColor !== 'indigo') {
            document.body.classList.add(`theme-${settings.themeColor}`);
         }
-        // Sync language from cloud if available and not set locally (optional strategy)
-        // For now, we prefer local setting for language
       }
     });
 
-    // Start background check for reminders
+    // 4. Start background check for reminders
     checkIntervalRef.current = setInterval(checkReminders, 60000); // Check every minute
 
     return () => {
@@ -126,7 +140,7 @@ function AppContent() {
   const hideLoading = () => setIsLoading(false);
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 2500);
   };
 
   const toggleDarkMode = () => {
@@ -144,6 +158,7 @@ function AppContent() {
     showLoading(t('loading'));
     setTimeout(() => {
       setCurrentUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user)); // Save session
       setActivePage('dashboard');
       hideLoading();
       showToast(t('welcome'), 'success');
@@ -151,6 +166,7 @@ function AppContent() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('currentUser'); // Clear session
     setCurrentUser(null);
     showToast(t('logout_success'));
   };
@@ -192,6 +208,7 @@ function AppContent() {
     }
   };
 
+  // Note: To re-enable login page, change initial state of currentUser to null
   if (!currentUser) {
     const settings = allData.find(d => d.type === 'settings') as SystemSettings | undefined;
     return (
@@ -264,19 +281,34 @@ function LoadingOverlay({ text }: { text: string }) {
   );
 }
 
-// Internal Toast Component
+// Internal Toast Component (Enhanced to be a Status Box)
 function Toast({ message, type }: { message: string, type: 'success' | 'error' | 'info' }) {
   const colors = {
     success: 'bg-emerald-500',
     error: 'bg-rose-500',
     info: 'bg-indigo-600'
   };
+  
   return (
-    <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[1001] px-6 py-3 rounded-2xl shadow-2xl text-white font-bold text-sm animate-fadeIn ${colors[type]}`}>
-      <div className="flex items-center gap-2">
-        {type === 'success' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>}
-        {message}
-      </div>
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center pointer-events-none">
+        <div className={`pointer-events-auto px-8 py-6 rounded-3xl shadow-2xl text-white font-bold text-lg animate-fadeIn flex flex-col items-center gap-3 min-w-[300px] text-center backdrop-blur-md transform transition-all hover:scale-105 ${colors[type]}`}>
+            {type === 'success' && (
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-1">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+            )}
+            {type === 'error' && (
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-1">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                </div>
+            )}
+            {type === 'info' && (
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-1">
+                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+            )}
+            <span>{message}</span>
+        </div>
     </div>
   );
 }

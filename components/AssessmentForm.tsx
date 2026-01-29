@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AnyData, CurrentUser, Criterion, Assessment, Room, User } from '../types';
 import { dataService } from '../services/dataService';
 import { useLanguage } from '../services/i18n';
@@ -67,12 +67,25 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
   const criteria = allData.filter((d): d is Criterion => d.type === 'criterion' && d.criterion_type === type);
   const allRooms = allData.filter((d): d is Room => d.type === 'room');
   
-  // Filter rooms by room_type to match the assessment type
-  const typeFilteredRooms = allRooms.filter(r => (r.room_type || (type === 'classroom' ? 'classroom' : type)) === type);
-  
-  const rooms = (currentUser.role === 'admin') 
-    ? typeFilteredRooms 
-    : typeFilteredRooms.filter(r => currentUser.assigned_locations?.includes(r.room_name));
+  // Use useMemo to prevent rooms array from being recreated on every render, 
+  // which causes useEffect to re-run and reset attendance data.
+  const rooms = useMemo(() => {
+    const typeFilteredRooms = allRooms.filter(r => (r.room_type || (type === 'classroom' ? 'classroom' : type)) === type);
+    
+    return typeFilteredRooms.filter(r => {
+        if (currentUser.role === 'admin' || currentUser.role === 'teacher') return true;
+        
+        if (currentUser.role === 'student_council') {
+            // Exclude their own class if defined
+            if (currentUser.user_class && r.responsible_class === currentUser.user_class) {
+                return false;
+            }
+            return true;
+        }
+        
+        return currentUser.assigned_locations?.includes(r.room_name);
+    });
+  }, [allData, type, currentUser.role, currentUser.assigned_locations, currentUser.user_class]);
 
   // Helper to get translated text
   const getDisplay = (field: any) => {
@@ -110,7 +123,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
             setResponsibleStudents([]);
         }
     }
-  }, [formData.location, formData.date, type, allData, t]);
+  }, [formData.location, formData.date, type, allData, t, rooms]);
 
   const processImage = (file: File, location: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -191,13 +204,18 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
     setScores(prev => ({ ...prev, [criterionId]: score }));
   };
 
-  const toggleAttendance = (id: string) => {
+  const toggleAttendance = (e: React.MouseEvent, id: string) => {
+      e.preventDefault();
       setResponsibleStudents(prev => prev.map(s => s.id === id ? { ...s, present: !s.present } : s));
   };
 
-  const setAllAttendance = (present: boolean) => {
+  const setAllAttendance = (e: React.MouseEvent, present: boolean) => {
+      e.preventDefault();
       setResponsibleStudents(prev => prev.map(s => ({ ...s, present })));
   };
+
+  const isAllPresent = responsibleStudents.length > 0 && responsibleStudents.every(s => s.present);
+  const isAllAbsent = responsibleStudents.length > 0 && responsibleStudents.every(s => !s.present);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -339,13 +357,30 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
                           <div className="flex justify-between items-center mb-4">
                               <p className="text-sm text-slate-600 dark:text-slate-400">เช็คชื่อนักเรียนที่มาทำเวร:</p>
                               <div className="flex gap-2">
-                                  <button type="button" onClick={() => setAllAttendance(true)} className="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">{t('student_present')}</button>
-                                  <button type="button" onClick={() => setAllAttendance(false)} className="text-xs px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300">{t('student_absent')}</button>
+                                  <button 
+                                      type="button" 
+                                      onClick={(e) => setAllAttendance(e, true)} 
+                                      className={`text-xs px-3 py-1.5 rounded-lg transition-all active:scale-95 font-medium ${isAllPresent ? 'bg-emerald-600 text-white shadow-md ring-2 ring-offset-1 ring-emerald-500' : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'}`}
+                                  >
+                                      {t('student_present')}
+                                  </button>
+                                  <button 
+                                      type="button" 
+                                      onClick={(e) => setAllAttendance(e, false)} 
+                                      className={`text-xs px-3 py-1.5 rounded-lg transition-all active:scale-95 font-medium ${isAllAbsent ? 'bg-rose-500 text-white shadow-md ring-2 ring-offset-1 ring-rose-500' : 'bg-slate-200 text-slate-600 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300'}`}
+                                  >
+                                      {t('student_absent')}
+                                  </button>
                               </div>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {responsibleStudents.map(student => (
-                                  <button key={student.id} type="button" onClick={() => toggleAttendance(student.id)} className={`flex items-center justify-between p-3 rounded-lg border transition-all ${student.present ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700'}`}>
+                                  <button 
+                                    key={student.id} 
+                                    type="button" 
+                                    onClick={(e) => toggleAttendance(e, student.id)} 
+                                    className={`flex items-center justify-between p-3 rounded-lg border transition-all active:scale-95 ${student.present ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700'}`}
+                                  >
                                       <span className="font-medium text-sm">{student.name}</span>
                                       {student.present && <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>}
                                   </button>

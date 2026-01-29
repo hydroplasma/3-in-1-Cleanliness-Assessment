@@ -113,4 +113,5 @@ export interface CurrentUser {
   userName: string;
   initials: string;
   assigned_locations?: string[]; 
+  user_class?: string;
 }

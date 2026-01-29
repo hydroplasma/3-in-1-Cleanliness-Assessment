@@ -59,6 +59,14 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
     const details = getCategoryDetails(rank.category);
     const locale = language === 'th' ? 'th-TH' : language === 'is' ? 'th-TH' : 'en-US';
 
+    // Format Responsible Class (e.g. "ม.3" -> "นักเรียนชั้นมัธยมศึกษาปีที่ 3")
+    let recipientName = rank.responsibleClass;
+    if (recipientName.includes('ม.')) {
+        recipientName = `นักเรียนชั้นมัธยมศึกษาปีที่ ${recipientName.replace('ม.', '')}`;
+    } else if (recipientName !== 'General') {
+        recipientName = `นักเรียนชั้น ${recipientName}`;
+    }
+
     printWindow.document.write(`
       <html>
         <head>
@@ -75,9 +83,9 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
               border: 15px double ${details.color}; position: relative; text-align: center;
               background: #fff;
             }
-            .garuda { width: 80px; margin-bottom: 20px; }
+            .garuda { height: 100px; width: auto; margin-bottom: 20px; object-fit: contain; }
             .school-name { font-size: 32pt; font-weight: bold; margin-bottom: 5px; }
-            .recipient { font-size: 38pt; font-weight: bold; color: ${details.color}; margin: 20px 0; }
+            .recipient { font-size: 32pt; font-weight: bold; color: ${details.color}; margin: 20px 0; }
             .description { font-size: 18pt; line-height: 1.6; margin: 25px 40px; }
             .footer { margin-top: 50px; display: flex; justify-content: center; }
             .sign-area { text-align: center; width: 400px; }
@@ -91,12 +99,13 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
         </head>
         <body>
           <div class="certificate">
-            <img class="garuda" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Garuda_emblem_of_Thailand.svg/512px-Garuda_emblem_of_Thailand.svg.png" />
+            <img class="garuda" src="https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png" />
             <div class="school-name">${schoolName}</div>
             <div style="font-size: 16pt;">${affiliation}</div>
             <div style="font-size: 20pt; margin-top: 20px;">${t('cert_certify')}</div>
-            <div class="recipient">${rank.name}</div>
+            <div class="recipient">${recipientName}</div>
             <div class="description">
+              รับผิดชอบดูแล <strong>${rank.name}</strong><br/>
               ${t('cert_description')} <strong>${details.label}</strong><br/>
               ${t('cert_avg_score')} <strong>${rank.score} ${t('score')}</strong> (${rank.score >= 90 ? t('excellent') : t('very_good')})<br/>
               ${t('cert_month_of')} ${new Date(selectedMonth).toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
