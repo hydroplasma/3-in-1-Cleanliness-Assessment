@@ -70,6 +70,14 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
     ? allRooms 
     : allRooms.filter(r => currentUser.assigned_locations?.includes(r.room_name));
 
+  // Helper to get translated text
+  const getDisplay = (field: any) => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    const mappedLang = language === 'is' ? 'isan' : language;
+    return field[mappedLang] || field['th'] || field['en'] || '';
+  };
+
   useEffect(() => {
     setError('');
     setSuccess('');
@@ -355,12 +363,12 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
               {criteria.map((criterion, idx) => (
                 <div key={criterion.criterion_id} className="fade-in">
                   <div className="mb-4">
-                    <label className="block text-base font-black text-slate-800 dark:text-white mb-1 uppercase tracking-tight">{idx + 1}. {criterion.criterion_name}</label>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{criterion.criterion_description}</p>
+                    <label className="block text-base font-black text-slate-800 dark:text-white mb-1 uppercase tracking-tight">{idx + 1}. {getDisplay(criterion.criterion_name)}</label>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{getDisplay(criterion.criterion_description)}</p>
                   </div>
                   <div className="flex flex-col gap-3">
                     {[5, 4, 3, 2, 1].map(score => {
-                      const rubricDescription = criterion[`rubric_${score}`];
+                      const rubricDescription = getDisplay(criterion[`rubric_${score}`]);
                       const isSelected = scores[criterion.criterion_id] === score;
                       
                       return (

@@ -40,7 +40,7 @@ export const translations = {
     feat_security: "ความปลอดภัยภาพถ่าย",
     feat_security_desc: "ประทับลายน้ำ (Watermark) สถานที่/วัน/เวลา ลงบนภาพหลักฐานทันที",
     feat_attendance: "ระบบเช็คชื่อเวร",
-    feat_attendance_desc: "ดึงรายชื่อนักเรียนตามโซนรับผิดชอบอัตโนมัติ เพื่อเช็คชื่อทำเวร",
+    feat_attendance_desc: "ดึงรายชื่อนักเรียนตามโซนรับผิดชอบอัตโนัติ เพื่อเช็คชื่อทำเวร",
     feat_report: "วิเคราะห์ข้อมูล & รายงาน",
     feat_report_desc: "Dashboard สถิติย้อนหลัง พร้อมส่งออกรายงานรูปแบบ TXT และ Excel",
 
@@ -292,7 +292,8 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
+// Fix: Change children to optional to satisfy TypeScript's check in App.tsx when passed as JSX content.
+export function LanguageProvider({ children }: { children?: ReactNode }) {
   const [language, setLanguage] = useState<Language>('th');
 
   useEffect(() => {

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Assessment, Criterion, AnyData } from '../types';
 import Modal from './Modal';
+import { useLanguage } from '../services/i18n';
 
 interface AssessmentDetailModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface AssessmentDetailModalProps {
 }
 
 export default function AssessmentDetailModal({ isOpen, onClose, assessment, allData }: AssessmentDetailModalProps) {
+  const { language } = useLanguage();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // Close viewer when modal closes
@@ -21,6 +23,14 @@ export default function AssessmentDetailModal({ isOpen, onClose, assessment, all
   if (!assessment) return null;
 
   const criteria = allData.filter((d): d is Criterion => d.type === 'criterion' && d.criterion_type === assessment.assessment_type);
+
+  // Helper to get translated text
+  const getDisplay = (field: any) => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    const mappedLang = language === 'is' ? 'isan' : language;
+    return field[mappedLang] || field['th'] || field['en'] || '';
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -109,11 +119,11 @@ export default function AssessmentDetailModal({ isOpen, onClose, assessment, all
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ผลคะแนนแยกตามเกณฑ์</h4>
               {criteria.map((c) => {
                   const score = assessment[`criterion_${c.criterion_id}_score`] || 0;
-                  const rubricText = c[`rubric_${score}`] || 'ไม่มีข้อมูลรูบริก';
+                  const rubricText = getDisplay(c[`rubric_${score}`]) || 'ไม่มีข้อมูลรูบริก';
                   return (
                       <div key={c.criterion_id} className="border border-slate-100 rounded-2xl p-4 bg-white shadow-sm dark:bg-slate-800 dark:border-slate-700">
                           <div className="flex justify-between items-start mb-2.5">
-                              <h5 className="text-sm font-bold text-slate-800 dark:text-white leading-snug flex-1 pr-3">{c.criterion_name}</h5>
+                              <h5 className="text-sm font-bold text-slate-800 dark:text-white leading-snug flex-1 pr-3">{getDisplay(c.criterion_name)}</h5>
                               <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${score >= 4 ? 'bg-emerald-500 text-white' : score >= 3 ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'}`}>
                                   {score}
                               </div>

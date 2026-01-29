@@ -10,7 +10,7 @@ interface CriteriaProps {
 }
 
 export default function Criteria({ allData }: CriteriaProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const criteria = allData.filter((d): d is Criterion => d.type === 'criterion');
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -28,6 +28,14 @@ export default function Criteria({ allData }: CriteriaProps) {
     rubric_1: ''
   });
 
+  // Helper to get translated text from potential translation object
+  const getDisplay = (field: any) => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    const mappedLang = language === 'is' ? 'isan' : language;
+    return field[mappedLang] || field['th'] || field['en'] || '';
+  };
+
   const openAddModal = (type: 'area' | 'classroom' | 'restroom') => {
     setCurrentType(type);
     setEditingCriterion(null);
@@ -41,14 +49,17 @@ export default function Criteria({ allData }: CriteriaProps) {
   const openEditModal = (c: Criterion) => {
     setCurrentType(c.criterion_type);
     setEditingCriterion(c);
+    
+    // When editing, we simplify to string for the form if it's an object
+    // Note: In a full production app, you'd want to edit all translations
     setFormData({
-      name: c.criterion_name,
-      description: c.criterion_description,
-      rubric_5: c.rubric_5 || '',
-      rubric_4: c.rubric_4 || '',
-      rubric_3: c.rubric_3 || '',
-      rubric_2: c.rubric_2 || '',
-      rubric_1: c.rubric_1 || ''
+      name: typeof c.criterion_name === 'string' ? c.criterion_name : (c.criterion_name as any)?.th || '',
+      description: typeof c.criterion_description === 'string' ? c.criterion_description : (c.criterion_description as any)?.th || '',
+      rubric_5: typeof c.rubric_5 === 'string' ? c.rubric_5 : (c.rubric_5 as any)?.th || '',
+      rubric_4: typeof c.rubric_4 === 'string' ? c.rubric_4 : (c.rubric_4 as any)?.th || '',
+      rubric_3: typeof c.rubric_3 === 'string' ? c.rubric_3 : (c.rubric_3 as any)?.th || '',
+      rubric_2: typeof c.rubric_2 === 'string' ? c.rubric_2 : (c.rubric_2 as any)?.th || '',
+      rubric_1: typeof c.rubric_1 === 'string' ? c.rubric_1 : (c.rubric_1 as any)?.th || ''
     });
     setModalOpen(true);
   };
@@ -152,29 +163,36 @@ export default function Criteria({ allData }: CriteriaProps) {
           </button>
         </div>
         <div className="space-y-4">
-          {typeCriteria.map(c => (
-            <div key={c.criterion_id} className="border border-slate-200 rounded-xl p-4 bg-slate-50 hover:border-slate-300 transition-colors dark:bg-slate-800/50 dark:border-slate-700">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-bold text-slate-900 dark:text-white">{c.criterion_name}</h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-2">{c.criterion_description || 'ไม่มีคำอธิบาย'}</p>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-3 p-3 bg-white rounded-lg border border-slate-100 text-xs text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-500">
-                     <div><span className="font-bold text-slate-700 dark:text-slate-300">5:</span> {c.rubric_5?.substring(0, 50)}...</div>
-                     <div><span className="font-bold text-slate-700 dark:text-slate-300">1:</span> {c.rubric_1?.substring(0, 50)}...</div>
+          {typeCriteria.map(c => {
+            const name = getDisplay(c.criterion_name);
+            const desc = getDisplay(c.criterion_description);
+            const r5 = getDisplay(c.rubric_5);
+            const r1 = getDisplay(c.rubric_1);
+
+            return (
+              <div key={c.criterion_id} className="border border-slate-200 rounded-xl p-4 bg-slate-50 hover:border-slate-300 transition-colors dark:bg-slate-800/50 dark:border-slate-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-bold text-slate-900 dark:text-white">{name}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-2">{desc || 'ไม่มีคำอธิบาย'}</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 mt-3 p-3 bg-white rounded-lg border border-slate-100 text-xs text-slate-500 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-500">
+                      <div><span className="font-bold text-slate-700 dark:text-slate-300">5:</span> {r5.substring(0, 50)}{r5.length > 50 ? '...' : ''}</div>
+                      <div><span className="font-bold text-slate-700 dark:text-slate-300">1:</span> {r1.substring(0, 50)}{r1.length > 50 ? '...' : ''}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button className="text-slate-400 hover:text-indigo-600 p-1" onClick={() => openEditModal(c)}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button className="text-slate-400 hover:text-red-600 p-1" onClick={() => { if(confirm('ต้องการลบเกณฑ์นี้หรือไม่?')) dataService.delete(c) }}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-2 ml-4">
-                   <button className="text-slate-400 hover:text-indigo-600 p-1" onClick={() => openEditModal(c)}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                   </button>
-                   <button className="text-slate-400 hover:text-red-600 p-1" onClick={() => { if(confirm('ต้องการลบเกณฑ์นี้หรือไม่?')) dataService.delete(c) }}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                   </button>
-                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {typeCriteria.length === 0 && (
              <div className="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-xl dark:border-slate-700">ยังไม่มีการกำหนดเกณฑ์ คลิก "เพิ่มเกณฑ์" เพื่อเริ่มต้น</div>
           )}
@@ -199,7 +217,7 @@ export default function Criteria({ allData }: CriteriaProps) {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0l4 4m-4-4L8 8" /></svg>
               {t('import_json')}
            </button>
-           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
+           <input type="file" id="importCriteria" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
         </div>
       </div>
       <div className="space-y-6">

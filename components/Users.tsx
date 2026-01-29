@@ -150,35 +150,77 @@ export default function Users({ allData }: UsersProps) {
     fileInputRef.current?.click();
   };
 
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/);
+    if (lines.length < 2) return [];
+    
+    // Clean headers (remove BOM if exists)
+    const headers = lines[0].replace(/^\ufeff/, '').split(',').map(h => h.trim());
+    
+    const results = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = line.split(',').map(v => v.trim());
+      const entry: any = {};
+      headers.forEach((header, index) => {
+        entry[header] = values[index];
+      });
+      results.push(entry);
+    }
+    return results;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const isCSV = file.name.toLowerCase().endsWith('.csv');
     const reader = new FileReader();
+    
     reader.onload = async (event) => {
       try {
         const content = event.target?.result as string;
-        // Simplified import logic for User data (expecting JSON for reliability, but label as data transfer)
-        const importedData = JSON.parse(content);
+        let importedData: any[] = [];
+        
+        if (isCSV) {
+          const csvData = parseCSV(content);
+          importedData = csvData.map(row => ({
+            type: 'user',
+            user_name: row.Name || row.user_name,
+            user_email: row.Email || row.user_email,
+            user_role: (row.Role || row.user_role || 'student').toLowerCase(),
+            user_class: row.Class || row.user_class || '',
+            user_status: (row.Status || row.user_status || 'active').toLowerCase(),
+            password: 'demo123'
+          }));
+        } else {
+          importedData = JSON.parse(content);
+        }
+
         if (Array.isArray(importedData)) {
+           let count = 0;
            for (const item of importedData) {
-             if (item.type === 'user' || (item.user_email && item.user_name)) {
+             if (item.user_email && item.user_name) {
                 await dataService.create({
                   ...item,
                   type: 'user',
-                  user_id: item.user_id || 'USR-' + Date.now() + Math.random(),
+                  user_id: item.user_id || 'USR-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
                   user_created_at: item.user_created_at || new Date().toISOString()
                 });
+                count++;
              }
            }
-           alert(t('import_success'));
+           alert(`${t('import_success')} (${count} records)`);
         }
       } catch (err) {
+        console.error("Import Error:", err);
         alert(t('import_error'));
       }
     };
     reader.readAsText(file);
-    e.target.value = ''; // Reset
+    e.target.value = ''; // Reset input
   };
 
   const roleColors: Record<string, string> = {
@@ -233,6 +275,7 @@ export default function Users({ allData }: UsersProps) {
                 <th className="text-left py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider rounded-l-xl">ชื่อผู้ใช้</th>
                 <th className="text-left py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">อีเมล</th>
                 <th className="text-left py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">บทบาท</th>
+                <th className="text-left py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">ชั้นเรียน</th>
                 <th className="text-left py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">สถานะ</th>
                 <th className="text-right py-4 px-4 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider rounded-r-xl">จัดการ</th>
               </tr>
@@ -240,7 +283,7 @@ export default function Users({ allData }: UsersProps) {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-400">
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
                     <p className="text-sm">ไม่พบผู้ใช้งาน</p>
                   </td>
                 </tr>
@@ -257,6 +300,7 @@ export default function Users({ allData }: UsersProps) {
                     </td>
                     <td className="py-4 px-4 text-slate-600 dark:text-slate-400">{u.user_email}</td>
                     <td className="py-4 px-4"><span className={`role-badge ${roleColors[u.user_role]}`}>{roleLabels[u.user_role]}</span></td>
+                    <td className="py-4 px-4 text-sm font-medium text-slate-600 dark:text-slate-400">{u.user_class || '-'}</td>
                     <td className="py-4 px-4"><span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-semibold">{u.user_status}</span></td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -333,6 +377,11 @@ export default function Users({ allData }: UsersProps) {
                 <option value="inactive">ระงับการใช้งาน (Inactive)</option>
               </select>
             </div>
+          </div>
+
+          <div>
+             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">ชั้นเรียน (Class)</label>
+             <input type="text" placeholder="ม.1, ม.2/1" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={formData.class} onChange={e => setFormData({...formData, class: e.target.value})} />
           </div>
 
           {(formData.role === 'teacher' || formData.role === 'student_council') && (
