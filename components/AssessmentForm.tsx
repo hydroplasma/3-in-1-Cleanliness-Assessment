@@ -67,7 +67,7 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
   const criteria = allData.filter((d): d is Criterion => d.type === 'criterion' && d.criterion_type === type);
   const allRooms = allData.filter((d): d is Room => d.type === 'room');
   
-  // Update: Filter rooms by room_type to match the assessment type
+  // Filter rooms by room_type to match the assessment type
   const typeFilteredRooms = allRooms.filter(r => (r.room_type || (type === 'classroom' ? 'classroom' : type)) === type);
   
   const rooms = (currentUser.role === 'admin') 
@@ -364,62 +364,60 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
               {t('rubric_title')}
             </h4>
             <div className="space-y-10">
-              {criteria.map((criterion, idx) => (
-                <div key={criterion.criterion_id} className="fade-in">
-                  <div className="mb-4">
-                    <label className="block text-base font-black text-slate-800 dark:text-white mb-1 uppercase tracking-tight">{idx + 1}. {getDisplay(criterion.criterion_name)}</label>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{getDisplay(criterion.criterion_description)}</p>
+              {criteria.map((criterion, idx) => {
+                const selectedScore = scores[criterion.criterion_id];
+                const selectedRubricText = selectedScore ? getDisplay(criterion[`rubric_${selectedScore}`]) : null;
+
+                return (
+                  <div key={criterion.criterion_id} className="fade-in">
+                    <div className="mb-4">
+                      <label className="block text-base font-black text-slate-800 dark:text-white mb-1 uppercase tracking-tight">
+                        {idx + 1}. {getDisplay(criterion.criterion_name)}
+                      </label>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                        {getDisplay(criterion.criterion_description)}
+                      </p>
+                    </div>
+                    
+                    {/* Horizontal Buttons for Scores 1-5 */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {[5, 4, 3, 2, 1].map(score => {
+                        const isSelected = selectedScore === score;
+                        return (
+                          <button
+                            type="button"
+                            key={score}
+                            onClick={() => handleScoreChange(criterion.criterion_id, score)}
+                            className={`flex-1 min-w-[60px] py-3 rounded-xl font-black text-xl transition-all shadow-sm border-2 ${
+                              isSelected 
+                                ? `${scoreColors[score]} border-${config.color}-500 scale-105 ring-2 ring-offset-2 ring-${config.color}-500` 
+                                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700'
+                            }`}
+                          >
+                            {score}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Display rubric text ONLY below the buttons when a score is selected */}
+                    {selectedRubricText && (
+                      <div className={`p-4 rounded-xl border-l-4 shadow-sm bg-slate-50 dark:bg-slate-800/80 ${
+                        selectedScore >= 4 ? 'border-emerald-500' : selectedScore >= 2 ? 'border-indigo-500' : 'border-rose-500'
+                      } animate-fadeIn`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                            คำอธิบายระดับ {selectedScore}:
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-200 italic leading-relaxed">
+                          "{selectedRubricText}"
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-col gap-3">
-                    {[5, 4, 3, 2, 1].map(score => {
-                      const rubricDescription = getDisplay(criterion[`rubric_${score}`]);
-                      const isSelected = scores[criterion.criterion_id] === score;
-                      
-                      return (
-                        <label key={score} className="cursor-pointer group block">
-                          <input 
-                            type="radio" 
-                            name={criterion.criterion_id} 
-                            value={score} 
-                            className="peer hidden" 
-                            checked={isSelected} 
-                            onChange={() => handleScoreChange(criterion.criterion_id, score)} 
-                            required={idx === 0} 
-                          />
-                          <div className={`flex items-start gap-4 p-4 border-2 rounded-2xl transition-all duration-300 ${isSelected 
-                            ? `border-${config.color}-500 bg-${config.color}-50 dark:bg-${config.color}-900/20 shadow-md` 
-                            : 'border-slate-100 bg-white hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700'}`}>
-                            
-                            <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-black text-xl shadow-sm transition-transform group-hover:scale-105 ${isSelected ? scoreColors[score] : 'bg-slate-100 text-slate-400 dark:bg-slate-700'}`}>
-                              {score}
-                            </div>
-                            
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`text-sm font-bold ${isSelected ? `text-${config.color}-700 dark:text-${config.color}-400` : 'text-slate-700 dark:text-slate-300'}`}>
-                                  {t('level')}: {scoreLabels[score]}
-                                </span>
-                                {isSelected && (
-                                  <span className={`w-2 h-2 rounded-full animate-pulse bg-${config.color}-500`}></span>
-                                )}
-                              </div>
-                              <p className={`text-xs leading-relaxed ${isSelected ? 'text-slate-700 dark:text-slate-300 font-medium' : 'text-slate-500 dark:text-slate-500'}`}>
-                                {rubricDescription || 'No rubric description provided'}
-                              </p>
-                            </div>
-                            
-                            {isSelected && (
-                              <div className={`text-${config.color}-500 self-center`}>
-                                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                              </div>
-                            )}
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
