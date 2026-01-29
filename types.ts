@@ -22,6 +22,7 @@ export interface Room {
   room_name: string;
   room_building: string;
   room_floor: string;
+  room_type: 'area' | 'classroom' | 'restroom';
   responsible_class: string;
   created_at: string;
 }
@@ -31,13 +32,14 @@ export interface Criterion {
   type: 'criterion';
   criterion_id: string;
   criterion_type: 'area' | 'classroom' | 'restroom';
-  criterion_name: string;
-  criterion_description: string;
-  rubric_5?: string;
-  rubric_4?: string;
-  rubric_3?: string;
-  rubric_2?: string;
-  rubric_1?: string;
+  // Use any to allow both simple strings and translation objects as used in seedData
+  criterion_name: any;
+  criterion_description: any;
+  rubric_5?: any;
+  rubric_4?: any;
+  rubric_3?: any;
+  rubric_2?: any;
+  rubric_1?: any;
   created_at: string;
   [key: string]: any; 
 }

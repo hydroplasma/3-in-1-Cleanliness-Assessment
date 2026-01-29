@@ -120,7 +120,7 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
                   className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" 
                   onChange={handleDemoSelect}
                 >
-                  <option value="">-- {t('select_location') ? t('select_location').replace('-- ', '').replace(' --', '') : 'Select'} --</option>
+                  <option value="">{t('select_user_role')}</option>
                   <option value="admin@demo.com">👑 Admin (admin@demo.com)</option>
                   <option value="teacher@demo.com">👨‍🏫 Teacher (teacher@demo.com)</option>
                   <option value="council@demo.com">🎖️ Student Council</option>

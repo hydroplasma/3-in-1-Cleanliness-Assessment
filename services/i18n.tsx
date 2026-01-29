@@ -26,6 +26,7 @@ export const translations = {
     // Login
     login_title: "เข้าสู่ระบบประเมิน",
     quick_login: "บัญชีทดสอบ (Quick Login)",
+    select_user_role: "-- เลือกสถานะผู้ใช้ --",
     or_use_account: "หรือใช้บัญชีของคุณ",
     email: "อีเมลผู้ใช้งาน",
     password: "รหัสผ่าน",
@@ -137,6 +138,7 @@ export const translations = {
     // Login
     login_title: "Login to System",
     quick_login: "Quick Login (Demo)",
+    select_user_role: "-- Select User Role --",
     or_use_account: "Or use your account",
     email: "Email Address",
     password: "Password",
@@ -245,6 +247,11 @@ export const translations = {
     criteria: "เกณฑ์ให้คะแนน",
     settings: "ตั้งค่าโรงเรียน/ระบบ",
     
+    // Login
+    login_title: "เข้าสู่ระบบประเมิน",
+    quick_login: "บัญชีทดสอบ (Quick Login)",
+    select_user_role: "-- เลือกสถานะผู้ใช้ --",
+
     // Admin Tools
     export_excel: "ส่งออกเอ็กเซล",
     import_data: "ดึงข้อมูลเข้า",
@@ -292,7 +299,6 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Fix: Change children to optional to satisfy TypeScript's check in App.tsx when passed as JSX content.
 export function LanguageProvider({ children }: { children?: ReactNode }) {
   const [language, setLanguage] = useState<Language>('th');
 

@@ -66,9 +66,13 @@ export default function AssessmentForm({ type, currentUser, allData, showLoading
 
   const criteria = allData.filter((d): d is Criterion => d.type === 'criterion' && d.criterion_type === type);
   const allRooms = allData.filter((d): d is Room => d.type === 'room');
+  
+  // Update: Filter rooms by room_type to match the assessment type
+  const typeFilteredRooms = allRooms.filter(r => (r.room_type || (type === 'classroom' ? 'classroom' : type)) === type);
+  
   const rooms = (currentUser.role === 'admin') 
-    ? allRooms 
-    : allRooms.filter(r => currentUser.assigned_locations?.includes(r.room_name));
+    ? typeFilteredRooms 
+    : typeFilteredRooms.filter(r => currentUser.assigned_locations?.includes(r.room_name));
 
   // Helper to get translated text
   const getDisplay = (field: any) => {

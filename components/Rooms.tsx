@@ -1,13 +1,16 @@
+
 import React, { useState } from 'react';
 import { AnyData, Room } from '../types';
 import { dataService } from '../services/dataService';
 import Modal from './Modal';
+import { useLanguage } from '../services/i18n';
 
 interface RoomsProps {
   allData: AnyData[];
 }
 
 export default function Rooms({ allData }: RoomsProps) {
+  const { t } = useLanguage();
   const rooms = allData.filter((d): d is Room => d.type === 'room');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
@@ -16,12 +19,13 @@ export default function Rooms({ allData }: RoomsProps) {
     name: '',
     building: '',
     floor: '',
+    type: 'classroom' as 'area' | 'classroom' | 'restroom',
     responsibleClass: ''
   });
 
   const openAddModal = () => {
     setEditingRoom(null);
-    setFormData({ name: '', building: '', floor: '', responsibleClass: '' });
+    setFormData({ name: '', building: '', floor: '', type: 'classroom', responsibleClass: '' });
     setModalOpen(true);
   };
 
@@ -31,6 +35,7 @@ export default function Rooms({ allData }: RoomsProps) {
       name: room.room_name,
       building: room.room_building,
       floor: room.room_floor,
+      type: room.room_type || 'classroom',
       responsibleClass: room.responsible_class
     });
     setModalOpen(true);
@@ -44,6 +49,7 @@ export default function Rooms({ allData }: RoomsProps) {
         room_name: formData.name,
         room_building: formData.building,
         room_floor: formData.floor,
+        room_type: formData.type,
         responsible_class: formData.responsibleClass
       });
     } else {
@@ -53,6 +59,7 @@ export default function Rooms({ allData }: RoomsProps) {
         room_name: formData.name,
         room_building: formData.building,
         room_floor: formData.floor,
+        room_type: formData.type,
         responsible_class: formData.responsibleClass,
         created_at: new Date().toISOString()
       });
@@ -66,18 +73,37 @@ export default function Rooms({ allData }: RoomsProps) {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'area': return t('assessment_area');
+      case 'classroom': return t('assessment_classroom');
+      case 'restroom': return t('assessment_restroom');
+      default: return type;
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'area': return 'bg-blue-100 text-blue-700';
+      case 'classroom': return 'bg-emerald-100 text-emerald-700';
+      case 'restroom': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
   return (
     <div className="page-content fade-in">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">จัดการห้อง (Room Management)</h2>
-        <p className="text-slate-500 mt-1">จัดการรายชื่อห้องและกำหนดชั้นเรียนที่รับผิดชอบ</p>
-      </div>
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <button onClick={openAddModal} className="btn-primary text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg> เพิ่มห้อง
-          </button>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('manage_rooms')}</h2>
+          <p className="text-slate-500 mt-1">จัดการรายชื่อห้องและพื้นที่แยกตามประเภทการประเมิน</p>
         </div>
+        <button onClick={openAddModal} className="btn-primary text-white px-5 py-2.5 rounded-xl font-bold shadow-lg flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg> เพิ่มห้อง/พื้นที่
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden dark:bg-slate-900 dark:border-slate-800">
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {rooms.length === 0 ? (
@@ -87,9 +113,9 @@ export default function Rooms({ allData }: RoomsProps) {
               </div>
             ) : (
               rooms.map(r => (
-                <div key={r.room_id} className="border border-slate-200 rounded-xl p-5 bg-white hover:shadow-md transition-shadow relative group">
+                <div key={r.room_id} className="border border-slate-200 rounded-xl p-5 bg-white dark:bg-slate-800 dark:border-slate-700 hover:shadow-md transition-shadow relative group">
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg text-white ${r.room_type === 'area' ? 'bg-blue-500' : r.room_type === 'restroom' ? 'bg-amber-500' : 'bg-emerald-500'}`}>
                       {r.room_name.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -101,11 +127,16 @@ export default function Rooms({ allData }: RoomsProps) {
                       </button>
                     </div>
                   </div>
-                  <h4 className="font-bold text-slate-900 text-lg">{r.room_name}</h4>
+                  <div className="mb-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${getTypeColor(r.room_type)}`}>
+                      {getTypeLabel(r.room_type)}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-slate-900 dark:text-white text-lg">{r.room_name}</h4>
                   <p className="text-sm text-slate-500 mt-1">{r.room_building || 'ไม่ระบุตึก'} • {r.room_floor || 'ไม่ระบุชั้น'}</p>
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-600 mb-1">ชั้นเรียนที่รับผิดชอบ:</p>
-                    <p className="text-sm font-bold text-indigo-600">{r.responsible_class || 'ยังไม่กำหนด'}</p>
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">ชั้นเรียนที่รับผิดชอบ:</p>
+                    <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{r.responsible_class || 'ยังไม่กำหนด'}</p>
                   </div>
                 </div>
               ))
@@ -114,54 +145,67 @@ export default function Rooms({ allData }: RoomsProps) {
         </div>
       </div>
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingRoom ? "แก้ไขข้อมูลห้อง" : "เพิ่มห้องใหม่"}>
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingRoom ? "แก้ไขข้อมูลห้อง/พื้นที่" : "เพิ่มห้อง/พื้นที่ใหม่"}>
+        <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">ชื่อห้อง</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">ประเภทสถานที่</label>
+            <select 
+              required
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+              value={formData.type}
+              onChange={e => setFormData({...formData, type: e.target.value as any})}
+            >
+              <option value="area">{t('assessment_area')}</option>
+              <option value="classroom">{t('assessment_classroom')}</option>
+              <option value="restroom">{t('assessment_restroom')}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">ชื่อห้อง/ชื่อพื้นที่</label>
             <input 
               type="text" 
               required 
-              placeholder="ตัวอย่าง: ห้อง 3A, ห้องคอมพิวเตอร์" 
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900" 
+              placeholder="ตัวอย่าง: ห้อง 3A, เขตพื้นที่ 1" 
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">อาคาร</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">อาคาร</label>
               <input 
                 type="text" 
                 placeholder="อาคารหลัก" 
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900" 
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
                 value={formData.building}
                 onChange={e => setFormData({...formData, building: e.target.value})}
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">ชั้น</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">ชั้น</label>
               <input 
                 type="text" 
                 placeholder="ชั้น 2" 
-                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900" 
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
                 value={formData.floor}
                 onChange={e => setFormData({...formData, floor: e.target.value})}
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">ชั้นเรียนที่รับผิดชอบ</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">ชั้นเรียนที่รับผิดชอบ</label>
             <input 
               type="text" 
               placeholder="ตัวอย่าง: ม.3/1" 
-              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900" 
+              className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
               value={formData.responsibleClass}
               onChange={e => setFormData({...formData, responsibleClass: e.target.value})}
             />
           </div>
-          <div className="flex gap-3 pt-4">
-            <button type="button" onClick={() => setModalOpen(false)} className="flex-1 px-6 py-3 text-slate-600 font-semibold rounded-xl hover:bg-slate-100 transition-colors">ยกเลิก</button>
-            <button type="submit" className="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center"><span>{editingRoom ? "บันทึกแก้ไข" : "เพิ่มห้อง"}</span></button>
+          <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <button type="button" onClick={() => setModalOpen(false)} className="flex-1 px-6 py-3 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
+            <button type="submit" className="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center"><span>{editingRoom ? "บันทึกแก้ไข" : "เพิ่มห้อง/พื้นที่"}</span></button>
           </div>
         </form>
       </Modal>
