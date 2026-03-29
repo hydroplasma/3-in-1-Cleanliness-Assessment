@@ -53,19 +53,33 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const schoolName = settings?.school_name || 'School Name';
-    const affiliation = settings?.school_affiliation || '';
+    const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
+    const affiliation = settings?.school_affiliation || 'สังกัดองค์การบริหารส่วนจังหวัดศรีสะเกษ';
     const executives = settings?.executives || t('cert_director');
     const details = getCategoryDetails(rank.category);
     const locale = language === 'th' ? 'th-TH' : language === 'is' ? 'th-TH' : 'en-US';
 
-    // Format Responsible Class (e.g. "ม.3" -> "นักเรียนชั้นมัธยมศึกษาปีที่ 3")
-    let recipientName = rank.responsibleClass;
-    if (recipientName.includes('ม.')) {
-        recipientName = `นักเรียนชั้นมัธยมศึกษาปีที่ ${recipientName.replace('ม.', '')}`;
-    } else if (recipientName !== 'General') {
-        recipientName = `นักเรียนชั้น ${recipientName}`;
+    // Format Responsible Class Name logic
+    let recipientName = rank.responsibleClass || '';
+    recipientName = recipientName.trim();
+
+    if (recipientName && recipientName !== 'General' && recipientName !== 'ไม่ระบุ') {
+        if (recipientName.includes('ม.')) {
+            const level = recipientName.replace('ม.', '').trim();
+            recipientName = `นักเรียนชั้นมัธยมศึกษาปีที่ ${level}`;
+        } else if (/^\d/.test(recipientName)) {
+            recipientName = `นักเรียนชั้นมัธยมศึกษาปีที่ ${recipientName}`;
+        } else {
+            recipientName = `นักเรียนชั้น ${recipientName}`;
+        }
+    } else {
+        recipientName = `ผู้รับผิดชอบดูแลพื้นที่`;
     }
+
+    // REMOVE "M.x" from location name logic
+    // Example: "ม.3 ห้องน้ำชาย" -> "ห้องน้ำชาย"
+    // Regex matches "ม." followed by digits, optional slash digits, and space
+    const cleanLocationName = rank.name.replace(/ม\.\d+(\/\d+)?\s*/g, '').trim();
 
     printWindow.document.write(`
       <html>
@@ -75,52 +89,74 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
             @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
             body { 
               margin: 0; padding: 0; font-family: 'Sarabun', sans-serif;
-              display: flex; justify-content: center; align-items: center;
-              height: 100vh; background: #fff;
+              display: flex; flex-direction: column; justify-content: center; align-items: center;
+              min-height: 100vh; background: #eee;
+            }
+            .certificate-container {
+               background: white; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1);
+               margin-bottom: 20px;
             }
             .certificate {
-              width: 297mm; height: 210mm; padding: 20mm; box-sizing: border-box;
-              border: 15px double ${details.color}; position: relative; text-align: center;
-              background: #fff;
+              width: 297mm; height: 210mm; padding: 15mm 20mm; box-sizing: border-box;
+              border: 12px double ${details.color}; position: relative; text-align: center;
+              background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between;
             }
-            .garuda { height: 100px; width: auto; margin-bottom: 20px; object-fit: contain; }
-            .school-name { font-size: 32pt; font-weight: bold; margin-bottom: 5px; }
-            .recipient { font-size: 32pt; font-weight: bold; color: ${details.color}; margin: 20px 0; }
-            .description { font-size: 18pt; line-height: 1.6; margin: 25px 40px; }
-            .footer { margin-top: 50px; display: flex; justify-content: center; }
+            .garuda { height: 100px; width: auto; margin-bottom: 10px; object-fit: contain; }
+            .school-name { font-size: 28pt; font-weight: bold; margin-bottom: 2px; }
+            .recipient { font-size: 26pt; font-weight: bold; color: ${details.color}; margin: 15px 0; }
+            .description { font-size: 18pt; line-height: 1.7; margin: 10px 30px; }
+            .footer { margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
             .sign-area { text-align: center; width: 400px; }
-            .line { border-bottom: 1px dotted #333; margin-bottom: 10px; }
-            .date { font-size: 14pt; margin-top: 20px; }
+            .line { border-bottom: 1px dotted #333; margin-bottom: 8px; margin-top: 40px; }
+            .date { font-size: 14pt; margin-top: 15px; }
+            strong { font-weight: bold; }
+            
+            .print-btn {
+              padding: 10px 20px; font-size: 16px; background: #3b82f6; color: white; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; margin-bottom: 20px;
+            }
+            .print-btn:hover { background: #2563eb; }
+
             @media print {
-              .certificate { border-color: ${details.color} !important; -webkit-print-color-adjust: exact; }
+              body { background: white; height: auto; display: block; }
+              .certificate-container { box-shadow: none; padding: 0; margin: 0; }
+              .print-btn { display: none; }
+              .certificate { border-color: ${details.color} !important; -webkit-print-color-adjust: exact; page-break-after: always; }
               .recipient { color: ${details.color} !important; }
+              @page { size: landscape; margin: 0; }
             }
           </style>
         </head>
         <body>
-          <div class="certificate">
-            <img class="garuda" src="https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png" />
-            <div class="school-name">${schoolName}</div>
-            <div style="font-size: 16pt;">${affiliation}</div>
-            <div style="font-size: 20pt; margin-top: 20px;">${t('cert_certify')}</div>
-            <div class="recipient">${recipientName}</div>
-            <div class="description">
-              รับผิดชอบดูแล <strong>${rank.name}</strong><br/>
-              ${t('cert_description')} <strong>${details.label}</strong><br/>
-              ${t('cert_avg_score')} <strong>${rank.score} ${t('score')}</strong> (${rank.score >= 90 ? t('excellent') : t('very_good')})<br/>
-              ${t('cert_month_of')} ${new Date(selectedMonth).toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
-            </div>
-            <div class="footer">
-              <div class="sign-area">
-                <div style="margin-bottom: 40px;"></div>
-                <div class="line"></div>
-                <div>( ${executives} )</div>
-                <div>${t('cert_director')}</div>
+          <button class="print-btn" onclick="window.print()">🖨️ พิมพ์เกียรติบัตร (Print)</button>
+          <div class="certificate-container">
+            <div class="certificate">
+              <div>
+                <img class="garuda" src="https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png" />
+                <div class="school-name">${schoolName}</div>
+                <div style="font-size: 14pt;">${affiliation}</div>
+              </div>
+              
+              <div style="width: 100%;">
+                <div style="font-size: 18pt; margin-top: 10px;">${t('cert_certify')}</div>
+                <div class="recipient">${recipientName}</div>
+                <div class="description">
+                  รับผิดชอบดูแล <strong>${cleanLocationName}</strong> เป็นพื้นที่ที่มีการจัดการด้านความสะอาด<br/>
+                  และสุขอนามัยดีเยี่ยมในหมวด <strong>${details.label}</strong><br/>
+                  ได้คะแนนเฉลี่ยสะสม <strong>${rank.score} ${t('score')}</strong> ประจำเดือน 
+                  ${new Date(selectedMonth).toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+                </div>
+              </div>
+
+              <div class="footer">
+                <div class="sign-area">
+                  <div class="line"></div>
+                  <div style="font-size: 16pt;">( ${executives} )</div>
+                  <div style="font-size: 14pt;">${t('cert_director')}</div>
+                </div>
+                <div class="date">${t('cert_issued_at')} ${new Date(issueDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</div>
               </div>
             </div>
-            <div class="date">${t('cert_issued_at')} ${new Date(issueDate).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}</div>
           </div>
-          <script>window.onload = function() { window.print(); };</script>
         </body>
       </html>
     `);
@@ -131,7 +167,7 @@ export default function Certificates({ allData, settings }: CertificatesProps) {
     <div className="page-content fade-in">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('cert_print')}</h2>
-        <p className="text-slate-500 mt-1">พิมพ์เกียรติบัตรแยกตามประเภทพื้นที่และกำหนดวันที่ออกเอกสาร</p>
+        <p className="text-slate-500 mt-1">พิมพ์เกียรติบัตรสำหรับพื้นที่ที่ผ่านเกณฑ์ประเมิน (80 คะแนนขึ้นไป)</p>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-800 mb-6 transition-colors">

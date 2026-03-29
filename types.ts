@@ -24,6 +24,7 @@ export interface Room {
   room_floor: string;
   room_type: 'area' | 'classroom' | 'restroom';
   responsible_class: string;
+  assigned_evaluator_name?: string; // New field for assigned inspector
   created_at: string;
 }
 
@@ -100,9 +101,11 @@ export interface SystemSettings {
   logo_url?: string;
   reminder_time?: string;
   reminder_daily?: Record<number, string>; 
-  last_reminder_sent_date?: string; 
+  last_daily_report_date?: string; 
   language?: Language;
   showQuickLogin?: boolean;
+  allowMultipleDailyAreas?: boolean; // New specific setting
+  telegram_report_title?: string; // New setting for customizable report header
 }
 
 export type AnyData = User | Room | Criterion | Assessment | Goal | Notification | SystemSettings;

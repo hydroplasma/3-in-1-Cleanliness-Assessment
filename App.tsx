@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { dataService } from './services/dataService';
-import { AnyData, CurrentUser, SystemSettings, User, Assessment } from './types';
+import { AnyData, CurrentUser, SystemSettings, User, Assessment, Room } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import AssessmentForm from './components/AssessmentForm';
@@ -15,10 +15,11 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import NotificationPanel from './components/NotificationPanel';
 import Certificates from './components/Certificates';
+import InAppBrowserWarning from './components/InAppBrowserWarning';
 import { LanguageProvider, useLanguage } from './services/i18n';
 
 function AppContent() {
-  // Initialize currentUser as null to require login
+  // Initialize currentUser as null to require real login
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   
   const [activePage, setActivePage] = useState('dashboard');
@@ -33,12 +34,12 @@ function AppContent() {
   const [loadingText, setLoadingText] = useState(t('loading'));
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
-  // Background interval reference
-  const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   useEffect(() => {
-    // 1. Restore Session from LocalStorage
-    const savedUser = localStorage.getItem('currentUser');
+    // 1. Restore Session from LocalStorage OR SessionStorage
+    const localUser = localStorage.getItem('currentUser');
+    const sessionUser = sessionStorage.getItem('currentUser');
+    const savedUser = localUser || sessionUser;
+
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
@@ -46,6 +47,7 @@ function AppContent() {
       } catch (e) {
         console.error("Failed to restore session", e);
         localStorage.removeItem('currentUser');
+        sessionStorage.removeItem('currentUser');
       }
     }
 
@@ -70,68 +72,15 @@ function AppContent() {
       }
     });
 
-    // 4. Start background check for reminders
-    checkIntervalRef.current = setInterval(checkReminders, 60000); // Check every minute
-
     return () => {
       unsubscribe();
-      if (checkIntervalRef.current) clearInterval(checkIntervalRef.current);
     };
   }, []);
 
   // Update loading text when language changes
   useEffect(() => {
-    if (isLoading) setLoadingText(t('loading'));
-  }, [t, isLoading]);
-
-  const checkReminders = async () => {
-    const data = dataService.getAll();
-    const settings = data.find(d => d.type === 'settings') as SystemSettings;
-    
-    // Safety check
-    if (!settings || !settings.notify_reminders || !settings.telegram_token || !settings.telegram_chat_id) return;
-
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0=Sunday, 1=Monday...
-    const scheduledTime = settings.reminder_daily?.[dayOfWeek];
-    
-    // If no time is set for today, do nothing
-    if (!scheduledTime) return;
-
-    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const today = now.toISOString().split('T')[0];
-
-    // Check if we already sent a reminder today
-    if (settings.last_reminder_sent_date === today) return;
-
-    // Check if time matches or has passed the scheduled time
-    if (currentTime >= scheduledTime) {
-      // Check if any assessment was done today
-      const assessments = data.filter((d): d is Assessment => d.type === 'assessment');
-      const hasAssessmentToday = assessments.some(a => a.date === today);
-
-      if (!hasAssessmentToday) {
-        // Send Telegram Notification
-        try {
-          const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
-          const message = `🔔 แจ้งเตือน: วัน${days[dayOfWeek]} ขณะนี้เวลา ${currentTime} น. ถึงเวลาที่กำหนด (${scheduledTime} น.) แต่ยังไม่มีการบันทึกการประเมินความสะอาดใดๆ สำหรับวันนี้ (${new Date().toLocaleDateString('th-TH')}) กรุณาดำเนินการตรวจสอบตามที่ได้รับมอบหมายด้วยค่ะ/ครับ`;
-          const url = `https://api.telegram.org/bot${settings.telegram_token}/sendMessage?chat_id=${settings.telegram_chat_id}&text=${encodeURIComponent(message)}`;
-          
-          await fetch(url);
-          
-          // Update last sent date in settings to prevent double sending
-          await dataService.update({
-            ...settings,
-            last_reminder_sent_date: today
-          });
-          
-          console.log('Daily Reminder sent successfully');
-        } catch (error) {
-          console.error('Failed to send Telegram reminder:', error);
-        }
-      }
-    }
-  };
+    if (isLoading && loadingText === 'Loading...') setLoadingText(t('loading'));
+  }, [t, isLoading, loadingText]);
 
   const showLoading = (text: string) => {
     setLoadingText(text);
@@ -154,11 +103,17 @@ function AppContent() {
     }
   };
 
-  const handleLogin = (user: CurrentUser) => {
+  const handleLogin = (user: CurrentUser, remember: boolean) => {
     showLoading(t('loading'));
     setTimeout(() => {
       setCurrentUser(user);
-      localStorage.setItem('currentUser', JSON.stringify(user)); // Save session
+      if (remember) {
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        sessionStorage.removeItem('currentUser');
+      } else {
+        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.removeItem('currentUser');
+      }
       setActivePage('dashboard');
       hideLoading();
       showToast(t('welcome'), 'success');
@@ -166,7 +121,8 @@ function AppContent() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser'); // Clear session
+    localStorage.removeItem('currentUser');
+    sessionStorage.removeItem('currentUser');
     setCurrentUser(null);
     showToast(t('logout_success'));
   };
@@ -190,7 +146,7 @@ function AppContent() {
       case 'assessment-restroom':
         return <AssessmentForm type="restroom" {...commonProps} />;
       case 'report':
-        return <Reports allData={allData} showLoading={showLoading} hideLoading={hideLoading} showToast={showToast} />;
+        return <Reports allData={allData} showLoading={showLoading} hideLoading={hideLoading} showToast={showToast} currentUser={currentUser} />;
       case 'goals':
         return <Goals allData={allData} />;
       case 'users':
@@ -208,12 +164,12 @@ function AppContent() {
     }
   };
 
-  // Note: To re-enable login page, change initial state of currentUser to null
   if (!currentUser) {
     const settings = allData.find(d => d.type === 'settings') as SystemSettings | undefined;
     return (
       <>
         {isLoading && <LoadingOverlay text={loadingText} />}
+        {toast && <Toast message={toast.message} type={toast.type} />}
         <Login onLogin={handleLogin} settings={settings} allData={allData} />
       </>
     );
@@ -240,6 +196,7 @@ function AppContent() {
           isOpen={mobileMenuOpen}
           closeMobileMenu={() => setMobileMenuOpen(false)}
           user={currentUser}
+          onLogout={handleLogout}
         />
         <main className="flex-1 lg:ml-64 p-4 lg:p-6 overflow-auto bg-slate-50 dark:bg-slate-950 h-[calc(100vh-64px)] transition-colors duration-200 flex flex-col">
           <div className="flex-1">
@@ -264,6 +221,7 @@ function AppContent() {
 export default function App() {
   return (
     <LanguageProvider>
+      <InAppBrowserWarning />
       <AppContent />
     </LanguageProvider>
   );
@@ -272,16 +230,16 @@ export default function App() {
 // Internal Loading Component
 function LoadingOverlay({ text }: { text: string }) {
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-slate-900 dark:text-white font-bold">{text}</p>
+    <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-6 max-w-sm text-center">
+        <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="text-slate-900 dark:text-white font-bold text-lg leading-relaxed">{text}</p>
       </div>
     </div>
   );
 }
 
-// Internal Toast Component (Enhanced to be a Status Box)
+// Internal Toast Component
 function Toast({ message, type }: { message: string, type: 'success' | 'error' | 'info' }) {
   const colors = {
     success: 'bg-emerald-500',

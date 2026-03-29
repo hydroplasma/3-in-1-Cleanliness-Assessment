@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { AnyData, Criterion } from '../types';
 import { dataService } from '../services/dataService';
 import Modal from './Modal';
+import ConfirmationModal from './ConfirmationModal';
 import { useLanguage } from '../services/i18n';
 
 interface CriteriaProps {
@@ -17,6 +18,10 @@ export default function Criteria({ allData }: CriteriaProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCriterion, setEditingCriterion] = useState<Criterion | null>(null);
   const [currentType, setCurrentType] = useState<'area' | 'classroom' | 'restroom'>('area');
+  
+  // Confirmation Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [criterionToDelete, setCriterionToDelete] = useState<Criterion | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,7 +33,6 @@ export default function Criteria({ allData }: CriteriaProps) {
     rubric_1: ''
   });
 
-  // Helper to get translated text from potential translation object
   const getDisplay = (field: any) => {
     if (!field) return '';
     if (typeof field === 'string') return field;
@@ -49,9 +53,6 @@ export default function Criteria({ allData }: CriteriaProps) {
   const openEditModal = (c: Criterion) => {
     setCurrentType(c.criterion_type);
     setEditingCriterion(c);
-    
-    // When editing, we simplify to string for the form if it's an object
-    // Note: In a full production app, you'd want to edit all translations
     setFormData({
       name: typeof c.criterion_name === 'string' ? c.criterion_name : (c.criterion_name as any)?.th || '',
       description: typeof c.criterion_description === 'string' ? c.criterion_description : (c.criterion_description as any)?.th || '',
@@ -91,6 +92,19 @@ export default function Criteria({ allData }: CriteriaProps) {
       });
     }
     setModalOpen(false);
+  };
+
+  const confirmDelete = (c: Criterion) => {
+    setCriterionToDelete(c);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteCriterion = async () => {
+    if (criterionToDelete) {
+        await dataService.delete(criterionToDelete);
+        setDeleteModalOpen(false);
+        setCriterionToDelete(null);
+    }
   };
 
   const handleExportJSON = () => {
@@ -185,7 +199,7 @@ export default function Criteria({ allData }: CriteriaProps) {
                     <button className="text-slate-400 hover:text-indigo-600 p-1" onClick={() => openEditModal(c)}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
-                    <button className="text-slate-400 hover:text-red-600 p-1" onClick={() => { if(confirm('ต้องการลบเกณฑ์นี้หรือไม่?')) dataService.delete(c) }}>
+                    <button className="text-slate-400 hover:text-red-600 p-1" onClick={() => confirmDelete(c)}>
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
@@ -204,6 +218,7 @@ export default function Criteria({ allData }: CriteriaProps) {
   return (
     <div className="page-content fade-in">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* ... Header ... */}
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">จัดการเกณฑ์และรูบริก (Criteria & Rubrics)</h2>
           <p className="text-slate-500 mt-1">ตั้งค่าเกณฑ์การประเมินและรูบริกสำหรับแต่ละประเภทการประเมิน</p>
@@ -268,6 +283,16 @@ export default function Criteria({ allData }: CriteriaProps) {
             </div>
          </form>
       </Modal>
+
+      <ConfirmationModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteCriterion}
+        title="ยืนยันการลบเกณฑ์"
+        message={`คุณต้องการลบเกณฑ์ "${getDisplay(criterionToDelete?.criterion_name)}" หรือไม่?`}
+        confirmText="ลบเกณฑ์"
+        type="danger"
+      />
     </div>
   );
 }

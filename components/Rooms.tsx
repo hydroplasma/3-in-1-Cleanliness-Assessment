@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { AnyData, Room } from '../types';
+import { AnyData, Room, User } from '../types';
 import { dataService } from '../services/dataService';
 import Modal from './Modal';
+import ConfirmationModal from './ConfirmationModal';
 import { useLanguage } from '../services/i18n';
 
 interface RoomsProps {
@@ -12,20 +13,29 @@ interface RoomsProps {
 export default function Rooms({ allData }: RoomsProps) {
   const { t } = useLanguage();
   const rooms = allData.filter((d): d is Room => d.type === 'room');
+  const eligibleInspectors = allData.filter((d): d is User => 
+    d.type === 'user' && ['admin', 'teacher', 'student_council'].includes(d.user_role)
+  );
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   
+  // Confirmation Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     building: '',
     floor: '',
     type: 'classroom' as 'area' | 'classroom' | 'restroom',
-    responsibleClass: ''
+    responsibleClass: '',
+    assignedEvaluator: ''
   });
 
   const openAddModal = () => {
     setEditingRoom(null);
-    setFormData({ name: '', building: '', floor: '', type: 'classroom', responsibleClass: '' });
+    setFormData({ name: '', building: '', floor: '', type: 'classroom', responsibleClass: '', assignedEvaluator: '' });
     setModalOpen(true);
   };
 
@@ -36,7 +46,8 @@ export default function Rooms({ allData }: RoomsProps) {
       building: room.room_building,
       floor: room.room_floor,
       type: room.room_type || 'classroom',
-      responsibleClass: room.responsible_class
+      responsibleClass: room.responsible_class,
+      assignedEvaluator: room.assigned_evaluator_name || ''
     });
     setModalOpen(true);
   };
@@ -50,7 +61,8 @@ export default function Rooms({ allData }: RoomsProps) {
         room_building: formData.building,
         room_floor: formData.floor,
         room_type: formData.type,
-        responsible_class: formData.responsibleClass
+        responsible_class: formData.responsibleClass,
+        assigned_evaluator_name: formData.assignedEvaluator
       });
     } else {
       await dataService.create({
@@ -61,15 +73,23 @@ export default function Rooms({ allData }: RoomsProps) {
         room_floor: formData.floor,
         room_type: formData.type,
         responsible_class: formData.responsibleClass,
+        assigned_evaluator_name: formData.assignedEvaluator,
         created_at: new Date().toISOString()
       });
     }
     setModalOpen(false);
   };
 
-  const deleteRoom = async (room: Room) => {
-    if (confirm(`ต้องการลบห้อง "${room.room_name}" หรือไม่?`)) {
-      await dataService.delete(room);
+  const confirmDelete = (room: Room) => {
+    setRoomToDelete(room);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteRoom = async () => {
+    if (roomToDelete) {
+      await dataService.delete(roomToDelete);
+      setDeleteModalOpen(false);
+      setRoomToDelete(null);
     }
   };
 
@@ -122,7 +142,7 @@ export default function Rooms({ allData }: RoomsProps) {
                       <button className="text-indigo-500 hover:text-indigo-700 p-1" onClick={() => openEditModal(r)} title="แก้ไข">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
-                      <button className="text-red-500 hover:text-red-700 p-1" onClick={() => deleteRoom(r)} title="ลบ">
+                      <button className="text-red-500 hover:text-red-700 p-1" onClick={() => confirmDelete(r)} title="ลบ">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                       </button>
                     </div>
@@ -134,9 +154,16 @@ export default function Rooms({ allData }: RoomsProps) {
                   </div>
                   <h4 className="font-bold text-slate-900 dark:text-white text-lg">{r.room_name}</h4>
                   <p className="text-sm text-slate-500 mt-1">{r.room_building || 'ไม่ระบุตึก'} • {r.room_floor || 'ไม่ระบุชั้น'}</p>
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                    <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">ชั้นเรียนที่รับผิดชอบ:</p>
-                    <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{r.responsible_class || 'ยังไม่กำหนด'}</p>
+                  
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
+                    <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ผู้รับผิดชอบพื้นที่:</p>
+                        <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{r.responsible_class || 'ยังไม่กำหนด'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">ผู้รับผิดชอบตรวจ:</p>
+                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{r.assigned_evaluator_name || 'ยังไม่กำหนด'}</p>
+                    </div>
                   </div>
                 </div>
               ))
@@ -203,12 +230,38 @@ export default function Rooms({ allData }: RoomsProps) {
               onChange={e => setFormData({...formData, responsibleClass: e.target.value})}
             />
           </div>
+
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+             <label className="block text-sm font-bold text-indigo-700 dark:text-indigo-400 mb-2">กำหนดผู้รับผิดชอบตรวจ (Inspector)</label>
+             <select 
+               className="w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
+               value={formData.assignedEvaluator}
+               onChange={e => setFormData({...formData, assignedEvaluator: e.target.value})}
+             >
+                <option value="">-- ยังไม่กำหนด --</option>
+                {eligibleInspectors.map(u => (
+                    <option key={u.user_id} value={u.user_name}>{u.user_name} ({u.user_role})</option>
+                ))}
+             </select>
+             <p className="text-[10px] text-slate-400 mt-2">* ชื่อนี้จะไปปรากฏในรายงานสรุปผลประจำวันบน Telegram</p>
+          </div>
+
           <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
             <button type="button" onClick={() => setModalOpen(false)} className="flex-1 px-6 py-3 text-slate-600 dark:text-slate-400 font-semibold rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">ยกเลิก</button>
             <button type="submit" className="flex-1 btn-primary text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center"><span>{editingRoom ? "บันทึกแก้ไข" : "เพิ่มห้อง/พื้นที่"}</span></button>
           </div>
         </form>
       </Modal>
+
+      <ConfirmationModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteRoom}
+        title="ยืนยันการลบห้อง/พื้นที่"
+        message={`คุณต้องการลบห้อง "${roomToDelete?.room_name}" ออกจากระบบหรือไม่?`}
+        confirmText="ลบห้อง"
+        type="danger"
+      />
     </div>
   );
 }

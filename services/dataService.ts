@@ -124,6 +124,19 @@ class DataService {
     }
     return { isOk: true };
   }
+  
+  async triggerManualReport(): Promise<any> {
+    if (!API_URL || API_URL.includes("INSERT_YOUR")) {
+        return { status: 'error', message: 'API URL not configured' };
+    }
+    try {
+        const response = await fetch(`${API_URL}?action=triggerReport`);
+        return await response.json();
+    } catch (e) {
+        console.error(e);
+        return { status: 'error', message: e.toString() };
+    }
+  }
 
   private saveToCache() {
       localStorage.setItem("cached_data", JSON.stringify(this.data));
@@ -334,15 +347,15 @@ class DataService {
     // Settings
     initialData.push({
         type: 'settings',
-        telegram_token: '',
-        telegram_chat_id: '',
+        telegram_token: '8554080642:AAGNSQK32Aw9jggjirN0YUDH5LV8Kh4m17I',
+        telegram_chat_id: '-5109596055',
         notify_low_score: true,
         notify_reminders: true,
         notify_goals: true,
         themeColor: 'indigo',
         school_name: 'โรงเรียนน้ำคำวิทยา',
-        school_affiliation: 'สังกัดองค์การบริหารส่วนจังหวัดศรีสะเกษ',
-        executives: 'ผู้บริหารโรงเรียน',
+        school_affiliation: 'สังกัดสำนักงานเขตพื้นที่การศึกษามัธยมศึกษาศรีสะเกษ ยโสธร',
+        executives: 'ผู้อำนวยการโรงเรียน',
         logo_url: 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png',
         showQuickLogin: true,
         __backendId: `SET-${Date.now()}`

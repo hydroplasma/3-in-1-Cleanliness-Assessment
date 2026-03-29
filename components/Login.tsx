@@ -4,7 +4,7 @@ import { CurrentUser, SystemSettings, User, AnyData } from '../types';
 import { useLanguage } from '../services/i18n';
 
 interface LoginProps {
-  onLogin: (user: CurrentUser) => void;
+  onLogin: (user: CurrentUser, remember: boolean) => void;
   settings?: SystemSettings;
   allData: AnyData[];
 }
@@ -12,20 +12,12 @@ interface LoginProps {
 export default function Login({ onLogin, settings, allData }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { t, setLanguage, language } = useLanguage();
 
   const users = allData.filter((d): d is User => d.type === 'user');
-
-  const handleDemoSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    if (!val) return;
-    
-    setEmail(val);
-    setPassword('demo123'); 
-    setError('');
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,12 +49,11 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
       initials: foundUser.user_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2),
       assigned_locations: foundUser.assigned_locations,
       user_class: foundUser.user_class
-    });
+    }, rememberMe);
   };
 
   const schoolName = settings?.school_name || 'โรงเรียนน้ำคำวิทยา';
   const logoUrl = settings?.logo_url || 'https://i.postimg.cc/RZ0PCqVy/NKW-LOGO.png';
-  const showQuickLogin = settings?.showQuickLogin !== false; // Default to true if undefined
 
   const features = [
     {
@@ -114,40 +105,18 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
             <p className="text-slate-500 font-semibold text-sm">{schoolName}</p>
           </div>
 
-          {showQuickLogin && (
-            <>
-              <div className="mb-6 animate-fadeIn">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">{t('quick_login')}</label>
-                <select 
-                  className="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300" 
-                  onChange={handleDemoSelect}
-                >
-                  <option value="">{t('select_user_role')}</option>
-                  <option value="admin01@school.demo">👑 Admin (admin01)</option>
-                  <option value="teacher01@school.demo">👨‍🏫 Teacher (teacher01)</option>
-                  <option value="sapa601@school.demo">🎖️ Student Council (M.6)</option>
-                  <option value="nkw01477@school.demo">🎓 Student (M.1)</option>
-                </select>
-              </div>
-
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100 dark:border-slate-800"></span></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-400 dark:bg-slate-900">{t('or_use_account')}</span></div>
-              </div>
-            </>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{t('email')}</label>
               <div className="relative">
                 <input 
                   type="email" 
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-black bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
                   placeholder=""
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
+                  autoComplete="off"
                 />
                 <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 11-8 0 4 4 0 018 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
               </div>
@@ -157,11 +126,12 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
               <div className="relative">
                 <input 
                   type={showPassword ? "text" : "password"}
-                  className="w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
+                  className="w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-black bg-white dark:bg-slate-800 dark:border-slate-700 dark:text-white" 
                   placeholder=""
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  autoComplete="new-password"
                 />
                 <svg className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 
@@ -177,6 +147,19 @@ export default function Login({ onLogin, settings, allData }: LoginProps) {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="flex items-center">
+               <input 
+                 id="remember-me" 
+                 type="checkbox" 
+                 className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 bg-white"
+                 checked={rememberMe}
+                 onChange={(e) => setRememberMe(e.target.checked)}
+               />
+               <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+                 จดจำฉันในระบบ (Remember me)
+               </label>
             </div>
 
             {error && (

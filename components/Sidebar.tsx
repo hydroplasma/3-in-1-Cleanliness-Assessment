@@ -9,9 +9,10 @@ interface SidebarProps {
   isOpen: boolean;
   closeMobileMenu: () => void;
   user: CurrentUser | null;
+  onLogout: () => void;
 }
 
-export default function Sidebar({ activePage, setActivePage, isOpen, closeMobileMenu, user }: SidebarProps) {
+export default function Sidebar({ activePage, setActivePage, isOpen, closeMobileMenu, user, onLogout }: SidebarProps) {
   const { t } = useLanguage();
   
   const handleNav = (page: string, e: React.MouseEvent) => {
@@ -31,8 +32,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, closeMobile
   const canAssess = isAdmin || isTeacher || isCouncil;
 
   return (
-    <aside className={`w-64 bg-white dark:bg-slate-900 shadow-xl fixed left-0 top-16 bottom-0 z-40 transform transition-transform duration-300 border-r border-slate-100 dark:border-slate-800 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-      <nav className="p-3 space-y-1 overflow-y-auto h-full pb-20">
+    <aside className={`w-64 bg-white dark:bg-slate-900 shadow-xl fixed left-0 top-16 bottom-0 z-40 transform transition-transform duration-300 border-r border-slate-100 dark:border-slate-800 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <nav className="p-3 space-y-1 overflow-y-auto flex-1 pb-4">
         <a href="#" onClick={(e) => handleNav('dashboard', e)} className={navClass('dashboard')}>
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>
           <span>{t('dashboard')}</span>
@@ -98,6 +99,12 @@ export default function Sidebar({ activePage, setActivePage, isOpen, closeMobile
           </>
         )}
       </nav>
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+         <button onClick={onLogout} className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 py-3 rounded-xl font-bold transition-colors">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            ออกจากระบบ
+         </button>
+      </div>
     </aside>
   );
 }

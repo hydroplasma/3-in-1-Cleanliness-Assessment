@@ -1,0 +1,17 @@
+{
+  "name": "3-in-1 Cleanliness Assessment",
+  "short_name": "CleanAssess",
+  "description": "System for cleanliness assessment of areas, classrooms, and restrooms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2913/2913520.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

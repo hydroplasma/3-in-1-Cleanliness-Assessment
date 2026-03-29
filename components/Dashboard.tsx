@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AnyData, Assessment, Room } from '../types';
 import AssessmentDetailModal from './AssessmentDetailModal';
 import { useLanguage } from '../services/i18n';
@@ -16,9 +16,19 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
   const totalAssessments = assessments.length;
 
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [showPendingPopup, setShowPendingPopup] = useState(false);
 
-  // Get recent assessments
-  const recent = [...assessments].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 3);
+  // Get recent assessments - sorted by date then created_at from newest to oldest
+  const recent = useMemo(() => {
+    return [...assessments]
+      .sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateB !== dateA) return dateB - dateA;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      })
+      .slice(0, 3);
+  }, [assessments]);
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -96,11 +106,62 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
 
   const topScorers = getTopScorers();
 
+  // Logic for Top Assessors (New Feature for Motivation)
+  const getTopAssessors = () => {
+    const assessorStats: Record<string, { count: number, lastDate: string }> = {};
+    assessments.forEach(a => {
+      if (!assessorStats[a.evaluator]) {
+        assessorStats[a.evaluator] = { count: 0, lastDate: '' };
+      }
+      assessorStats[a.evaluator].count += 1;
+      if (a.date > assessorStats[a.evaluator].lastDate) {
+        assessorStats[a.evaluator].lastDate = a.date;
+      }
+    });
+
+    return Object.entries(assessorStats)
+      .map(([name, data]) => ({ name, count: data.count, lastDate: data.lastDate }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+  };
+
+  const topAssessors = getTopAssessors();
+
+  // Logic for Pending Tasks (For the logged-in user)
+  const getPendingTasks = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayAssessments = assessments.filter(a => a.date === today);
+    const assessedLocations = new Set(todayAssessments.map(a => a.location));
+    
+    // In a real app, we'd filter by currentUser's assigned locations
+    // For now, let's show all unassessed rooms to create a sense of collective responsibility
+    return rooms.filter(r => !assessedLocations.has(r.room_name));
+  };
+
+  const pendingTasks = getPendingTasks();
+
+  // Show pending tasks popup on first load if there are pending tasks
+  useEffect(() => {
+    const hasSeenPopup = sessionStorage.getItem('has_seen_pending_popup');
+    if (!hasSeenPopup && pendingTasks.length > 0) {
+      setShowPendingPopup(true);
+      sessionStorage.setItem('has_seen_pending_popup', 'true');
+    }
+  }, [pendingTasks.length]);
+
   return (
     <div className="page-content fade-in">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('overview')} ({t('dashboard')})</h2>
-        <p className="text-slate-500 mt-1">{t('overview_desc')}</p>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('overview')} ({t('dashboard')})</h2>
+          <p className="text-slate-500 mt-1">{t('overview_desc')}</p>
+        </div>
+        {pendingTasks.length > 0 && (
+          <div className="bg-rose-50 border border-rose-100 px-4 py-2 rounded-xl flex items-center gap-3 animate-pulse">
+            <div className="w-2 h-2 bg-rose-500 rounded-full"></div>
+            <span className="text-xs font-bold text-rose-600">วันนี้เหลืออีก {pendingTasks.length} จุดที่ยังไม่ได้ตรวจ!</span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -154,8 +215,8 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('trends')}</h3>
           </div>
@@ -180,6 +241,82 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
             </div>
           )}
         </div>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">🏆 ผู้ตรวจดีเด่น (Top Assessors)</h3>
+          </div>
+          <div className="space-y-4">
+            {topAssessors.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 italic text-sm">
+                ยังไม่มีข้อมูลผู้ตรวจ
+              </div>
+            ) : (
+              topAssessors.map((assessor, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-transparent hover:border-indigo-200 transition-all">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md ${idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-400' : 'bg-orange-400'}`}>
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-white truncate">{assessor.name}</p>
+                    <p className="text-[10px] text-slate-500">ตรวจล่าสุด: {new Date(assessor.lastDate).toLocaleDateString('th-TH')}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-indigo-600">{assessor.count}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">ครั้ง</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800">
+            <p className="text-xs text-indigo-700 dark:text-indigo-300 font-medium leading-relaxed">
+              💡 <b>เคล็ดลับ:</b> การตรวจที่สม่ำเสมอช่วยให้โรงเรียนสะอาดขึ้น และคุณจะได้รับการจัดอันดับที่สูงขึ้น!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-rose-600">📍 จุดที่ยังไม่ได้ตรวจวันนี้</h3>
+            <span className="text-xs font-bold bg-rose-100 text-rose-600 px-2 py-1 rounded-full">{pendingTasks.length} จุด</span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[320px] pr-2 custom-scrollbar">
+            {pendingTasks.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center py-12">
+                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <p className="text-slate-900 dark:text-white font-bold">ยอดเยี่ยม! ตรวจครบทุกจุดแล้ว</p>
+                <p className="text-xs text-slate-500 mt-1">ขอบคุณที่ปฏิบัติหน้าที่อย่างแข็งขัน</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {pendingTasks.map((task, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${task.room_type === 'area' ? 'bg-blue-500' : task.room_type === 'classroom' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                      <div>
+                        <p className="text-sm font-bold text-rose-600">{task.room_name}</p>
+                        <p className="text-[10px] text-rose-400 uppercase">{task.room_type || 'classroom'}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setActivePage(`assessment-${task.room_type || 'classroom'}`)}
+                      className="text-[10px] font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all"
+                    >
+                      ไปตรวจเลย
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 transition-colors">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6">{t('top_scorers')}</h3>
           <div className="space-y-4">
@@ -261,6 +398,35 @@ export default function Dashboard({ allData, setActivePage }: DashboardProps) {
         assessment={selectedAssessment} 
         allData={allData} 
       />
+
+      {showPendingPopup && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+            <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <h3 className="text-2xl font-black text-rose-600 mb-2">จุดที่ยังไม่ได้ตรวจวันนี้</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6 font-medium">วันนี้เหลืออีก <span className="text-rose-600 font-bold">{pendingTasks.length} จุด</span> ที่ยังไม่ได้รับการประเมิน</p>
+            
+            <div className="text-left bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl mb-6 border border-slate-100 dark:border-slate-700 max-h-48 overflow-y-auto custom-scrollbar">
+              {pendingTasks.map((task, idx) => (
+                <div key={idx} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${task.room_type === 'area' ? 'bg-blue-500' : task.room_type === 'classroom' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                  <span className="text-sm font-bold text-rose-600 truncate">{task.room_name}</span>
+                  <span className="text-[10px] text-rose-400 uppercase ml-auto">{task.room_type || 'classroom'}</span>
+                </div>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setShowPendingPopup(false)} 
+              className="w-full btn-primary text-white py-4 rounded-2xl font-black shadow-xl text-lg transform active:scale-95 transition-all"
+            >
+              รับทราบ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

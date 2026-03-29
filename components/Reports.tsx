@@ -1,31 +1,55 @@
 
 import React, { useState } from 'react';
-import { AnyData, Assessment, SystemSettings } from '../types';
+import { AnyData, Assessment, SystemSettings, CurrentUser } from '../types';
 import AssessmentDetailModal from './AssessmentDetailModal';
+import ConfirmationModal from './ConfirmationModal';
 import { useLanguage } from '../services/i18n';
+import { dataService } from '../services/dataService';
 
 interface ReportsProps {
   allData: AnyData[];
   showLoading: (text: string) => void;
   hideLoading: () => void;
   showToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  currentUser: CurrentUser;
 }
 
-export default function Reports({ allData, showLoading, hideLoading, showToast }: ReportsProps) {
+export default function Reports({ allData, showLoading, hideLoading, showToast, currentUser }: ReportsProps) {
   const { t, language } = useLanguage();
   const [filterStatus, setFilterStatus] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  
+  // State for Delete Confirmation
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<Assessment | null>(null);
+
+  const isAdmin = currentUser?.role === 'admin';
 
   const assessments = allData.filter((d): d is Assessment => d.type === 'assessment');
   const settings = allData.find(d => d.type === 'settings') as SystemSettings;
 
   const applyFilters = (list: Assessment[]) => {
     return list.filter(a => {
+      // 1. Status Filter
       if (filterStatus && a.status !== filterStatus) return false;
-      if (startDate && new Date(a.date) < new Date(startDate)) return false;
-      if (endDate && new Date(a.date) > new Date(endDate)) return false;
+      
+      // 2. Date Filter
+      if (!a.date) return false;
+
+      // Convert stored date to Local Date YYYY-MM-DD for accurate comparison
+      const d = new Date(a.date);
+      if (isNaN(d.getTime())) return false; // Skip invalid dates
+
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const itemDate = `${year}-${month}-${day}`;
+      
+      if (startDate && itemDate < startDate) return false;
+      if (endDate && itemDate > endDate) return false;
+      
       return true;
     });
   };
@@ -36,21 +60,48 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
 
   const totalFiltered = applyFilters(assessments);
   
-  const avgScore = totalFiltered.length 
-    ? (totalFiltered.reduce((sum, a) => sum + a.score, 0) / totalFiltered.length).toFixed(0) 
-    : 0;
-
   const handleClearFilters = () => {
     setFilterStatus('');
     setStartDate('');
     setEndDate('');
-    // Use the language variable directly instead of calling t('language')
     showToast(language === 'th' ? 'ล้างตัวกรองแล้ว' : 'Filters cleared', 'info');
+  };
+
+  const confirmDelete = (e: React.MouseEvent, assessment: Assessment) => {
+    e.stopPropagation();
+    setItemToDelete(assessment);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (itemToDelete) {
+      await dataService.delete(itemToDelete);
+      showToast('ลบข้อมูลเรียบร้อยแล้ว', 'success');
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'excellent': return t('excellent');
+      case 'good': return t('good');
+      case 'needs_improvement': return t('needs_improvement');
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'excellent': return 'bg-emerald-500';
+      case 'good': return 'bg-blue-500';
+      case 'needs_improvement': return 'bg-amber-500';
+      default: return 'bg-gray-500';
+    }
   };
 
   const handleExportPDF = () => {
     if (totalFiltered.length === 0) {
-      // Use the language variable directly instead of calling t('language')
       showToast(language === 'th' ? 'ไม่มีข้อมูลให้พิมพ์' : 'No data to print', 'error');
       return;
     }
@@ -61,6 +112,8 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
     const schoolName = settings?.school_name || 'School Name';
     const schoolAffiliation = settings?.school_affiliation || '';
     const locale = language === 'th' ? 'th-TH' : 'en-US';
+    
+    const avgScore = (totalFiltered.reduce((sum, a) => sum + a.score, 0) / totalFiltered.length).toFixed(0);
     
     let rowsHtml = totalFiltered.map((a, i) => `
       <tr>
@@ -131,7 +184,6 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
 
   const handleExportExcel = () => {
     if (totalFiltered.length === 0) {
-      // Use the language variable directly instead of calling t('language')
       showToast(language === 'th' ? 'ไม่มีข้อมูลให้ส่งออก' : 'No data to export', 'error');
       return;
     }
@@ -177,27 +229,8 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
       a.click();
       document.body.removeChild(a);
       hideLoading();
-      // Use the language variable directly instead of calling t('language')
       showToast(language === 'th' ? 'ส่งออกไฟล์ Excel สำเร็จ' : 'Excel exported successfully', 'success');
     }, 1000);
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'excellent': return t('excellent');
-      case 'good': return t('good');
-      case 'needs_improvement': return t('needs_improvement');
-      default: return status;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'excellent': return 'bg-emerald-500';
-      case 'good': return 'bg-blue-500';
-      case 'needs_improvement': return 'bg-amber-500';
-      default: return 'bg-gray-500';
-    }
   };
 
   const renderTable = (title: string, data: Assessment[], type: 'area' | 'classroom' | 'restroom') => {
@@ -233,7 +266,7 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
                 <th className="pb-3 px-2">{t('by')}</th>
                 <th className="pb-3 px-2 text-center">{t('score')}</th>
                 <th className="pb-3 px-2 text-center">Status</th>
-                <th className="pb-3 px-2 text-right">Photo</th>
+                <th className="pb-3 px-2 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -256,9 +289,16 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
                       <span className={`text-[10px] ${getStatusColor(a.status)} text-white px-2 py-1 rounded-lg font-bold shadow-sm`}>{getStatusLabel(a.status)}</span>
                     </td>
                     <td className="py-3 px-2 text-right">
-                      <div className="flex items-center justify-end gap-1 text-slate-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        <span className="text-[10px] font-bold">{a.image_count}</span>
+                      <div className="flex items-center justify-end gap-2 text-slate-400">
+                        <div className="flex items-center gap-1 mr-2">
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                           <span className="text-[10px] font-bold">{a.image_count}</span>
+                        </div>
+                        {isAdmin && (
+                            <button className="text-red-400 hover:text-red-600 p-1" onClick={(e) => confirmDelete(e, a)} title="ลบข้อมูล">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -273,57 +313,69 @@ export default function Reports({ allData, showLoading, hideLoading, showToast }
 
   return (
     <div className="page-content fade-in">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('report')}</h2>
-          <p className="text-slate-500 mt-1">สรุปผลการประเมินแยกตามหมวดหมู่ (เขตพื้นที่, ห้องเรียน, ห้องน้ำ)</p>
+          <p className="text-slate-500 mt-1">สรุปผลการประเมินและประวัติย้อนหลัง</p>
         </div>
         <div className="flex gap-2">
-            <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-bold text-xs shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg> {language === 'th' ? 'พิมพ์รายงาน (PDF)' : 'Print Report (PDF)'}
-            </button>
-            <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-bold text-xs shadow-md">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> {t('export_excel')}
-            </button>
+           <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-colors font-bold text-xs shadow-md">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+              PDF
+           </button>
+           <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-bold text-xs shadow-md">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 10l-4 4m0 0l-4-4m4 4V4" /></svg>
+              Excel
+           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-8 dark:bg-slate-900 dark:border-slate-800">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">สถานะการประเมิน</label>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white transition-all">
-              <option value="">ทั้งหมด</option>
-              <option value="excellent">{t('excellent')}</option>
-              <option value="good">{t('good')}</option>
-              <option value="needs_improvement">{t('needs_improvement')}</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">เริ่มต้นวันที่</label>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">ถึงวันที่</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 bg-slate-50 font-medium dark:bg-slate-800 dark:border-slate-700 dark:text-white" />
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end">
-          <button onClick={handleClearFilters} className="text-sm font-bold text-rose-500 hover:text-rose-700 transition-colors">ล้างตัวกรองทั้งหมด</button>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800 mb-8">
+        <h3 className="font-bold text-slate-900 dark:text-white mb-4">ตัวกรองข้อมูล (Filters)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+           <div>
+             <label className="block text-xs font-bold text-slate-500 mb-1">สถานะ</label>
+             <select className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                <option value="">ทั้งหมด</option>
+                <option value="excellent">{t('excellent')}</option>
+                <option value="good">{t('good')}</option>
+                <option value="needs_improvement">{t('needs_improvement')}</option>
+             </select>
+           </div>
+           <div>
+             <label className="block text-xs font-bold text-slate-500 mb-1">ตั้งแต่วันที่</label>
+             <input type="date" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={startDate} onChange={e => setStartDate(e.target.value)} />
+           </div>
+           <div>
+             <label className="block text-xs font-bold text-slate-500 mb-1">ถึงวันที่</label>
+             <input type="date" className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-white" value={endDate} onChange={e => setEndDate(e.target.value)} />
+           </div>
+           <div>
+             <button onClick={handleClearFilters} className="w-full py-2 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors text-sm dark:bg-slate-800 dark:text-slate-400">ล้างตัวกรอง</button>
+           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {renderTable('1. ' + t('report') + ': ' + t('assessment_area'), areaAssessments, 'area')}
-        {renderTable('2. ' + t('report') + ': ' + t('assessment_classroom'), classroomAssessments, 'classroom')}
-        {renderTable('3. ' + t('report') + ': ' + t('assessment_restroom'), restroomAssessments, 'restroom')}
-      </div>
+      {renderTable(t('assessment_area'), areaAssessments, 'area')}
+      {renderTable(t('assessment_classroom'), classroomAssessments, 'classroom')}
+      {renderTable(t('assessment_restroom'), restroomAssessments, 'restroom')}
 
       <AssessmentDetailModal 
         isOpen={!!selectedAssessment} 
         onClose={() => setSelectedAssessment(null)} 
         assessment={selectedAssessment} 
         allData={allData} 
+        currentUser={currentUser}
+      />
+
+      <ConfirmationModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="ยืนยันการลบข้อมูล"
+        message={`คุณต้องการลบข้อมูลการประเมินของ "${itemToDelete?.location}" วันที่ ${new Date(itemToDelete?.date || '').toLocaleDateString('th-TH')} หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+        confirmText="ลบข้อมูล"
+        type="danger"
       />
     </div>
   );

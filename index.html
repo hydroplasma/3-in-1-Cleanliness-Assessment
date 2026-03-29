@@ -287,8 +287,21 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered', reg))
+        .catch(err => console.log('Service Worker registration failed', err));
+    });
+  }
+</script>
 </head>
   <body class="h-full bg-slate-50 transition-colors duration-200">
     <div id="root" class="h-full overflow-auto"></div>
-  </body>
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>

@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { AnyData, User, Room } from '../types';
 import { dataService } from '../services/dataService';
 import Modal from './Modal';
+import ConfirmationModal from './ConfirmationModal';
 import { useLanguage } from '../services/i18n';
 
 interface UsersProps {
@@ -13,6 +14,11 @@ export default function Users({ allData }: UsersProps) {
   const { t } = useLanguage();
   const [modalOpen, setModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Confirmation Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const users = allData.filter((d): d is User => d.type === 'user');
@@ -104,9 +110,16 @@ export default function Users({ allData }: UsersProps) {
     setModalOpen(false);
   };
 
-  const deleteUser = async (user: User) => {
-    if (confirm(`คุณต้องการลบผู้ใช้ "${user.user_name}" หรือไม่?`)) {
-      await dataService.delete(user);
+  const confirmDelete = (user: User) => {
+    setUserToDelete(user);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (userToDelete) {
+      await dataService.delete(userToDelete);
+      setDeleteModalOpen(false);
+      setUserToDelete(null);
     }
   };
 
@@ -307,7 +320,7 @@ export default function Users({ allData }: UsersProps) {
                         <button className="text-slate-400 hover:text-indigo-600 transition-colors" onClick={() => openEditModal(u)}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         </button>
-                        <button className="text-slate-400 hover:text-red-600 transition-colors" onClick={() => deleteUser(u)}>
+                        <button className="text-slate-400 hover:text-red-600 transition-colors" onClick={() => confirmDelete(u)}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                       </div>
@@ -322,6 +335,7 @@ export default function Users({ allData }: UsersProps) {
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingUser ? "แก้ไขข้อมูลผู้ใช้" : "เพิ่มผู้ใช้งานใหม่"}>
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-2">
+          {/* ... existing form content ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">ชื่อ - นามสกุล</label>
@@ -409,6 +423,16 @@ export default function Users({ allData }: UsersProps) {
           </div>
         </form>
       </Modal>
+
+      <ConfirmationModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDeleteUser}
+        title="ยืนยันการลบผู้ใช้"
+        message={`คุณต้องการลบผู้ใช้ "${userToDelete?.user_name}" ออกจากระบบหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`}
+        confirmText="ลบผู้ใช้งาน"
+        type="danger"
+      />
     </div>
   );
 }

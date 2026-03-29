@@ -1,36 +1,124 @@
 
-import React, { useState, useEffect } from 'react';
-import { Assessment, Criterion, AnyData } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Assessment, Criterion, AnyData, CurrentUser } from '../types';
 import Modal from './Modal';
+import ConfirmationModal from './ConfirmationModal';
 import { useLanguage } from '../services/i18n';
+import { dataService } from '../services/dataService';
 
 interface AssessmentDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   assessment: Assessment | null;
   allData: AnyData[];
+  currentUser?: CurrentUser;
 }
 
-export default function AssessmentDetailModal({ isOpen, onClose, assessment, allData }: AssessmentDetailModalProps) {
-  const { language } = useLanguage();
+export default function AssessmentDetailModal({ isOpen, onClose, assessment, allData, currentUser }: AssessmentDetailModalProps) {
+  const { language, t } = useLanguage();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [imgLoadStatus, setImgLoadStatus] = useState<Record<number, boolean>>({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [editScore, setEditScore] = useState(0);
+  const [editStatus, setEditStatus] = useState('');
+  const [editRemarks, setEditRemarks] = useState('');
+  
+  // Delete Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  // Close viewer when modal closes
+  const isAdmin = currentUser?.role === 'admin';
+
   useEffect(() => {
-    if (!isOpen) setViewerIndex(null);
-  }, [isOpen]);
+    if (!isOpen) {
+      setViewerIndex(null);
+      setImgLoadStatus({});
+      setIsEditing(false);
+    } else if (assessment) {
+        setEditScore(assessment.score);
+        setEditStatus(assessment.status);
+        setEditRemarks(assessment.remarks || '');
+    }
+  }, [isOpen, assessment]);
 
-  if (!assessment) return null;
-
-  const criteria = allData.filter((d): d is Criterion => d.type === 'criterion' && d.criterion_type === assessment.assessment_type);
-
-  // Helper to get translated text
   const getDisplay = (field: any) => {
     if (!field) return '';
     if (typeof field === 'string') return field;
     const mappedLang = language === 'is' ? 'isan' : language;
     return field[mappedLang] || field['th'] || field['en'] || '';
   };
+
+  // Unified Criteria List using Snapshot if available or Robust Fallback
+  const displayItems = useMemo(() => {
+    if (!assessment) return [];
+
+    // Strategy 1: Use Snapshot (The most reliable for historical data)
+    let snapshot = assessment.criteria_snapshot;
+    
+    // Robust Parsing: Attempt to parse if it's a string
+    if (typeof snapshot === 'string') {
+        try { 
+            const cleanStr = (snapshot as string).trim();
+            if (cleanStr.startsWith('[') || cleanStr.startsWith('{')) {
+                snapshot = JSON.parse(cleanStr);
+            }
+        } catch (e) { 
+            console.error("Failed to parse criteria_snapshot:", e); 
+        }
+    }
+
+    if (snapshot && Array.isArray(snapshot) && snapshot.length > 0) {
+       return snapshot.map((c: any) => ({
+          id: c.id || c.criterion_id,
+          name: c.name,
+          description: c.description || '',
+          score: c.score,
+          rubric: c.rubric || ''
+       }));
+    }
+
+    // Strategy 2: Robust Fallback (Scan ALL criteria for matching keys)
+    // We do NOT filter by type here first, because sometimes types might be case-mismatched 
+    // (e.g. "Classroom" vs "classroom") in older data. We trust the ID match.
+    const allCriteria = allData.filter((d): d is Criterion => d.type === 'criterion');
+    
+    const foundItems = allCriteria.map(c => {
+       const conventions = [
+         `criterion_${c.criterion_id}_score`,
+         `${c.criterion_id}_score`,
+         c.criterion_id
+       ];
+       
+       let score: any = undefined;
+       for (const key of conventions) {
+          if (assessment[key] !== undefined && assessment[key] !== null && assessment[key] !== "") {
+            score = assessment[key];
+            break;
+          }
+       }
+       
+       if (score !== undefined) {
+         const scoreNum = Number(score);
+         return {
+            id: c.criterion_id,
+            name: c.criterion_name,
+            description: c.criterion_description,
+            score: scoreNum,
+            rubric: c[`rubric_${scoreNum}`] || ''
+         };
+       }
+       return null;
+    }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+    // If we found items via ID match, use them
+    if (foundItems.length > 0) {
+        return foundItems;
+    }
+
+    return [];
+
+  }, [assessment, allData, language]);
+
+  if (!assessment) return null;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -41,72 +129,93 @@ export default function AssessmentDetailModal({ isOpen, onClose, assessment, all
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'excellent': return 'ดีเยี่ยม';
-      case 'good': return 'ดี';
-      case 'needs_improvement': return 'ควรปรับปรุง';
-      default: return status;
+  const handleImageError = (idx: number, e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (!img.src.includes('&cb=')) {
+       img.src = `${assessment.images![idx]}&cb=${Date.now()}`;
+    } else {
+       img.src = 'https://placehold.co/600x400?text=Image+Unavailable';
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-emerald-600';
-    if (score >= 60) return 'text-amber-600';
-    return 'text-red-600';
+  const handleSaveEdit = async () => {
+      const updated = {
+          ...assessment,
+          score: editScore,
+          status: editStatus as any,
+          remarks: editRemarks
+      };
+      await dataService.update(updated);
+      setIsEditing(false);
+      window.location.reload(); 
   };
 
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (viewerIndex === null || !assessment.images) return;
-    setViewerIndex((viewerIndex - 1 + assessment.images.length) % assessment.images.length);
+  const handleDelete = async () => {
+      await dataService.delete(assessment);
+      setDeleteModalOpen(false);
+      onClose();
+      window.location.reload();
   };
 
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (viewerIndex === null || !assessment.images) return;
-    setViewerIndex((viewerIndex + 1) % assessment.images.length);
-  };
+  const hasBreakdown = assessment.raw_score !== undefined && assessment.max_score !== undefined;
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} title="รายละเอียดผลการประเมิน">
         <div className="space-y-6 max-h-[85vh] overflow-y-auto pr-2 custom-scrollbar">
-          {/* Header Summary */}
-          <div className="flex flex-col items-center text-center pb-6 border-b border-slate-100 dark:border-slate-800">
-             <div className={`w-24 h-24 rounded-full flex flex-col items-center justify-center border-8 ${assessment.score >= 80 ? 'border-emerald-100' : assessment.score >= 60 ? 'border-amber-100' : 'border-red-100'} mb-3 shadow-sm`}>
-                <span className={`text-4xl font-black ${getScoreColor(assessment.score)}`}>{assessment.score}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">คะแนน</span>
+          <div className="flex flex-col items-center text-center pb-6 border-b border-slate-100 dark:border-slate-800 relative">
+             {isAdmin && !isEditing && (
+                 <div className="absolute right-0 top-0 flex gap-2">
+                     <button onClick={() => setIsEditing(true)} className="text-xs px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 font-bold">แก้ไข</button>
+                     <button onClick={() => setDeleteModalOpen(true)} className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-bold">ลบ</button>
+                 </div>
+             )}
+
+             <div className={`w-24 h-24 rounded-full flex flex-col items-center justify-center border-8 ${assessment.score >= 80 ? 'border-emerald-100' : 'border-amber-100'} mb-3 shadow-xl dark:bg-slate-800 dark:border-slate-700`}>
+                {isEditing ? (
+                    <input type="number" value={editScore} onChange={e => setEditScore(Number(e.target.value))} className="w-16 text-center text-xl font-bold border-b border-slate-300 focus:outline-none dark:bg-transparent dark:text-white" />
+                ) : (
+                    <span className={`text-4xl font-black ${assessment.score >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{assessment.score}</span>
+                )}
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">คะแนนสุทธิ</span>
              </div>
+             
              <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">{assessment.location}</h3>
+             
              <div className="flex items-center gap-2 mt-2">
-                <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${getStatusColor(assessment.status)} shadow-sm`}>{getStatusLabel(assessment.status)}</span>
-                <span className="text-xs text-slate-400 font-semibold">{new Date(assessment.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                {isEditing ? (
+                    <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="text-xs border rounded p-1 dark:bg-slate-800 dark:text-white">
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="needs_improvement">Needs Improvement</option>
+                    </select>
+                ) : (
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-full ${getStatusColor(assessment.status)} shadow-sm`}>{assessment.status.toUpperCase()}</span>
+                )}
+                <span className="text-xs text-slate-400 font-bold">{new Date(assessment.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
              </div>
+             {hasBreakdown && (
+               <div className="mt-3 px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                 <p className="text-xs text-slate-500 dark:text-slate-400">
+                   คะแนนดิบ: <span className="font-bold text-slate-800 dark:text-white">{assessment.raw_score}</span> / {assessment.max_score}
+                 </p>
+               </div>
+             )}
           </div>
 
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">หมวดหมู่</p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 capitalize">{assessment.assessment_type}</p>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">ผู้ประเมิน</p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{assessment.evaluator}</p>
-              </div>
-          </div>
-
-          {/* Attendance Summary */}
-          {assessment.assessment_type === 'area' && assessment.attendance_data && (
-              <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 dark:bg-indigo-900/10 dark:border-indigo-800/50">
-                  <h4 className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase mb-3 flex items-center justify-between">
-                      <span className="flex items-center gap-1.5"><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg> สรุปการเช็คชื่อเวร</span>
-                      <span className="bg-white px-2 py-0.5 rounded-lg shadow-sm text-indigo-700">{assessment.attendance_score} / 10</span>
+          {assessment.attendance_data && assessment.attendance_data.length > 0 && (
+              <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 dark:bg-indigo-900/10 dark:border-indigo-900/30">
+                  <h4 className="text-[10px] font-black text-indigo-700 dark:text-indigo-400 uppercase mb-3 flex justify-between items-center">
+                    <span>สรุปการเช็คชื่อเวรนักเรียน</span>
+                    {assessment.attendance_points !== undefined && (
+                      <span className="bg-white dark:bg-slate-800 px-2 py-0.5 rounded-lg shadow-sm text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 text-[10px]">
+                        ได้ {assessment.attendance_points} / 10 คะแนน
+                      </span>
+                    )}
                   </h4>
                   <div className="flex flex-wrap gap-2">
                       {assessment.attendance_data.map((student) => (
-                          <div key={student.id} className={`text-[10px] px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 font-bold ${student.present ? 'bg-emerald-500 text-white shadow-sm' : 'bg-slate-200 text-slate-400 dark:bg-slate-800'}`}>
+                          <div key={student.id} className={`text-[10px] px-2.5 py-1.5 rounded-xl font-bold border transition-all ${student.present ? 'bg-emerald-500 border-emerald-400 text-white' : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'}`}>
                               {student.name}
                           </div>
                       ))}
@@ -114,49 +223,55 @@ export default function AssessmentDetailModal({ isOpen, onClose, assessment, all
               </div>
           )}
 
-          {/* Criteria Results */}
           <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ผลคะแนนแยกตามเกณฑ์</h4>
-              {criteria.map((c) => {
-                  const score = assessment[`criterion_${c.criterion_id}_score`] || 0;
-                  const rubricText = getDisplay(c[`rubric_${score}`]) || 'ไม่มีข้อมูลรูบริก';
-                  return (
-                      <div key={c.criterion_id} className="border border-slate-100 rounded-2xl p-4 bg-white shadow-sm dark:bg-slate-800 dark:border-slate-700">
-                          <div className="flex justify-between items-start mb-2.5">
-                              <h5 className="text-sm font-bold text-slate-800 dark:text-white leading-snug flex-1 pr-3">{getDisplay(c.criterion_name)}</h5>
-                              <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shadow-sm ${score >= 4 ? 'bg-emerald-500 text-white' : score >= 3 ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'}`}>
-                                  {score}
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">ผลคะแนนแยกตามหัวข้อ (1-5)</h4>
+              {displayItems.length === 0 ? (
+                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-center">
+                    <svg className="w-10 h-10 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p className="text-slate-400 text-sm italic">ไม่พบรายละเอียดคะแนนย่อยในฐานข้อมูล</p>
+                 </div>
+              ) : (
+                 displayItems.map((item, idx) => (
+                      <div key={idx} className="border border-slate-100 rounded-2xl p-5 bg-white dark:bg-slate-800 shadow-sm transition-hover hover:border-indigo-200 dark:border-slate-700 dark:hover:border-indigo-500">
+                          <div className="flex justify-between items-start mb-3">
+                              <h5 className="text-sm font-black text-slate-800 dark:text-white flex-1 pr-4 leading-snug">{getDisplay(item.name)}</h5>
+                              <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg shadow-md ${item.score >= 4 ? 'bg-emerald-500 text-white' : item.score >= 3 ? 'bg-indigo-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                  {item.score}
                               </div>
                           </div>
-                          <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-xl dark:bg-slate-900/50 dark:text-slate-400 border-l-4 border-slate-200 dark:border-slate-700 leading-relaxed">
-                              "{rubricText}"
-                          </p>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border-l-4 border-indigo-400">
+                             <p className="text-xs text-slate-600 dark:text-slate-400 italic leading-relaxed">
+                                "{getDisplay(item.rubric) || 'ไม่มีข้อมูลรูบริกสำหรับระดับคะแนนนี้'}"
+                             </p>
+                          </div>
                       </div>
-                  );
-              })}
+                  ))
+              )}
           </div>
 
-          {/* Evidence Photos */}
           {assessment.images && assessment.images.length > 0 && (
               <div className="space-y-3">
-                  <div className="flex items-center justify-between pl-1">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">รูปภาพหลักฐาน ({assessment.images.length})</h4>
-                      <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full dark:bg-emerald-900/30">
-                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                          มีพิกัดลายน้ำยืนยัน
-                      </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">รูปภาพหลักฐานยืนยัน</h4>
+                  <div className="grid grid-cols-2 gap-4">
                       {assessment.images.map((img, idx) => (
-                          <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 bg-slate-100 group shadow-sm cursor-pointer" onClick={() => setViewerIndex(idx)}>
-                              <img src={img} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-colors">
-                                  <svg className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transform scale-50 group-hover:scale-100 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                  </svg>
-                              </div>
-                              <div className="absolute top-2 left-2 bg-emerald-600 text-[8px] text-white px-1.5 py-0.5 rounded-lg shadow-lg font-bold flex items-center gap-1 backdrop-blur-sm bg-opacity-80">
-                                  VERIFIED
+                          <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 group cursor-pointer shadow-md" onClick={() => setViewerIndex(idx)}>
+                              <img 
+                                src={img} 
+                                alt={`Evidence ${idx + 1}`}
+                                loading="eager" 
+                                className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${imgLoadStatus[idx] ? 'opacity-100' : 'opacity-0'}`}
+                                onLoad={() => setImgLoadStatus(prev => ({...prev, [idx]: true}))}
+                                onError={(e) => handleImageError(idx, e)}
+                              />
+                              {!imgLoadStatus[idx] && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800">
+                                   <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-all">
+                                  <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transform scale-50 group-hover:scale-100 transition-all">
+                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                  </div>
                               </div>
                           </div>
                       ))}
@@ -164,64 +279,61 @@ export default function AssessmentDetailModal({ isOpen, onClose, assessment, all
               </div>
           )}
 
-          {/* Remarks */}
-          {assessment.remarks && (
-              <div className="p-5 bg-amber-50 rounded-2xl dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
-                  <h4 className="text-[10px] font-black text-amber-600 uppercase mb-2 tracking-widest">หมายเหตุจากผู้ประเมิน</h4>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">{assessment.remarks}</p>
+          {assessment.remarks && !isEditing && (
+              <div className="p-5 bg-amber-50 dark:bg-amber-900/10 rounded-2xl border border-amber-100 dark:border-amber-800 shadow-inner">
+                  <h4 className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase mb-2 tracking-widest">หมายเหตุผู้ตรวจสอบ</h4>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed">{assessment.remarks}</p>
               </div>
           )}
 
-          <div className="pt-4 sticky bottom-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md pb-2">
-              <button onClick={onClose} className="w-full btn-primary text-white py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-sm transform active:scale-95 transition-all">ปิดหน้าต่าง</button>
+          {isEditing && (
+             <div className="animate-fadeIn">
+                <label className="block text-xs font-bold text-slate-500 mb-1">แก้ไขหมายเหตุ</label>
+                <textarea 
+                   value={editRemarks} 
+                   onChange={e => setEditRemarks(e.target.value)} 
+                   className="w-full border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm dark:bg-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                   rows={3}
+                />
+             </div>
+          )}
+
+          <div className="pt-6 sticky bottom-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md pb-2 flex gap-3">
+              {isEditing ? (
+                 <>
+                    <button onClick={() => setIsEditing(false)} className="flex-1 py-4 rounded-2xl font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">ยกเลิก</button>
+                    <button onClick={handleSaveEdit} className="flex-1 py-4 rounded-2xl font-bold bg-indigo-600 text-white shadow-xl hover:bg-indigo-700 transition-all">บันทึกการแก้ไข</button>
+                 </>
+              ) : (
+                 <button onClick={onClose} className="w-full btn-primary text-white py-4 rounded-2xl font-black shadow-xl uppercase tracking-widest text-sm transform active:scale-95 transition-all">ปิดหน้าต่างสรุปผล</button>
+              )}
           </div>
         </div>
       </Modal>
 
-      {/* Full-screen Image Viewer */}
       {viewerIndex !== null && assessment.images && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center animate-fadeIn" onClick={() => setViewerIndex(null)}>
-          {/* Close Button */}
-          <button 
-            className="absolute top-6 right-6 p-3 text-white/70 hover:text-white hover:bg-white/10 rounded-full transition-all z-[110]"
-            onClick={() => setViewerIndex(null)}
-          >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <div className="fixed inset-0 z-[2000] bg-black/95 flex flex-col items-center justify-center animate-fadeIn" onClick={() => setViewerIndex(null)}>
+          <button className="absolute top-8 right-8 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all" onClick={() => setViewerIndex(null)}>
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
-
-          {/* Previous Button */}
-          <button 
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all z-[110]"
-            onClick={handlePrev}
-          >
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/></svg>
-          </button>
-
-          {/* Next Button */}
-          <button 
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all z-[110]"
-            onClick={handleNext}
-          >
-            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/></svg>
-          </button>
-
-          {/* Main Image */}
-          <div className="relative max-w-[90%] max-h-[80%] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={assessment.images[viewerIndex]} 
-              className="max-w-full max-h-full object-contain shadow-2xl rounded-lg border border-white/10" 
-              alt="Full Evidence"
-            />
-            
-            {/* Image Indicator */}
-            <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 text-white/70 font-bold text-sm bg-white/10 px-4 py-1.5 rounded-full backdrop-blur-md">
-              รูปที่ {viewerIndex + 1} / {assessment.images.length}
-            </div>
+          <div className="relative max-w-[95%] max-h-[85%] flex items-center justify-center p-4">
+            <img src={assessment.images[viewerIndex]} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl border border-white/10" alt="Full View" />
           </div>
-
-          <p className="absolute bottom-6 text-white/40 text-[10px] font-medium tracking-widest uppercase">คลิกพื้นที่ว่างเพื่อปิด</p>
+          <div className="mt-6 bg-white/10 backdrop-blur-xl px-6 py-2 rounded-full text-white font-bold tracking-widest text-sm border border-white/20 shadow-2xl">
+             รูปที่ {viewerIndex + 1} / {assessment.images.length}
+          </div>
         </div>
       )}
+
+      <ConfirmationModal 
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="ยืนยันการลบข้อมูล"
+        message={`คุณต้องการลบข้อมูลการประเมินของ "${assessment.location}" วันที่ ${new Date(assessment.date).toLocaleDateString('th-TH')} หรือไม่?`}
+        confirmText="ลบข้อมูล"
+        type="danger"
+      />
     </>
   );
 }
